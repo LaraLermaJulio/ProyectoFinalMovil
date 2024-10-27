@@ -15,6 +15,9 @@
   -->
 <resources>
     <string name="app_name">Inventory</string>
+    <string name="notes_title">My Notes</string>
+    <string name="Tasks">Tasks</string>
+    <string name="notes_personal" translatable="false">Notes</string>
     <string name="attention">Attention</string>
     <string name="back_button">Back</string>
     <string name="delete">Delete</string>

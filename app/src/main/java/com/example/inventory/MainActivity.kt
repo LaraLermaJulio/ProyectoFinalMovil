@@ -75,11 +75,17 @@ import androidx.compose.material3.TabRow
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.*
+import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.filled.Mic
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        val config = resources.configuration
+        config.setLocale(Locale.getDefault())
+        createConfigurationContext(config)
         setContent {
             InventoryTheme {
 
@@ -115,7 +121,7 @@ fun InventoryScaffold() {
                     ),
                     title = {
                         Text(
-                            "Mis Notas",
+                            text = stringResource(R.string.notes_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -144,12 +150,12 @@ fun InventoryScaffold() {
                     Tab(
                         selected = selectedTabIndex == 0,
                         onClick = { selectedTabIndex = 0 },
-                        text = { Text("Tareas") }
+                        text = { Text(text = stringResource(R.string.Tasks)) }
                     )
                     Tab(
                         selected = selectedTabIndex == 1,
                         onClick = { selectedTabIndex = 1 },
-                        text = { Text("Notas") }
+                        text = {  Text(text = stringResource(R.string.notes_personal)) }
                     )
                 }
             }
@@ -167,7 +173,7 @@ fun InventoryScaffold() {
                         Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(40.dp))
                     }
                     IconButton(onClick = { /* do something */ }) {
-                        Icon(Icons.Filled.Call, contentDescription = "Call", modifier = Modifier.size(40.dp))
+                        Icon(Icons.Filled.Mic, contentDescription = "Microphone", modifier = Modifier.size(40.dp))
                     }
                     IconButton(onClick = { /* do something */ }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete", modifier = Modifier.size(40.dp))
