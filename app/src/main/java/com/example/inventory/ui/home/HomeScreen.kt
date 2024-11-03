@@ -73,6 +73,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Tab
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 object HomeDestination : NavigationDestination {
     override val route = "home"
@@ -92,11 +96,13 @@ fun HomeScreen(
 ) {
     val homeUiState by viewModel.homeUiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
+                // Barra superior con la barra de título y búsqueda
                 CenterAlignedTopAppBar(
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -126,6 +132,33 @@ fun HomeScreen(
                     },
                     scrollBehavior = scrollBehavior,
                 )
+
+                // TabRow se coloca después de la barra superior
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Tab(
+                        selected = selectedTabIndex == 0,
+                        onClick = { selectedTabIndex = 0 },
+                        text = {
+                            Text(
+                                text = stringResource(R.string.Tasks),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 },
+                        text = {
+                            Text(
+                                text = stringResource(R.string.notes_personal),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    )
+                }
             }
         },
         bottomBar = {
