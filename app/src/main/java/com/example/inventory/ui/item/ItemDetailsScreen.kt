@@ -114,7 +114,7 @@ fun ItemDetailsScreen(
     ) { innerPadding ->
         ItemDetailsBody(
             itemDetailsUiState = uiState.value,
-            onSellItem = {  },
+            onMarkAsFinished = { viewModel.markAsFinished() },
             onDelete = {
                 coroutineScope.launch {
                     viewModel.deleteItem()
@@ -135,7 +135,7 @@ fun ItemDetailsScreen(
 @Composable
 private fun ItemDetailsBody(
     itemDetailsUiState: ItemDetailsUiState,
-    onSellItem: () -> Unit,
+    onMarkAsFinished: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -148,10 +148,10 @@ private fun ItemDetailsBody(
             item = itemDetailsUiState.itemDetails.toItem(), modifier = Modifier.fillMaxWidth()
         )
         Button(
-            onClick = onSellItem,
+            onClick = onMarkAsFinished,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
-            enabled = !itemDetailsUiState.outOfStock
+            enabled = !itemDetailsUiState.notFinished
         ) {
             Text(stringResource(R.string.finished))
         }

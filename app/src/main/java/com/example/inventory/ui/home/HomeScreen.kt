@@ -16,6 +16,7 @@
 
 package com.example.inventory.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -76,6 +77,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextDecoration
 
 object HomeDestination : NavigationDestination {
     override val route = "home"
@@ -231,7 +233,7 @@ private fun HomeBody(
                 itemList = itemList,
                 onItemClick = { onItemClick(it.id) },
                 contentPadding = contentPadding,
-                modifier = Modifier.padding(horizontal = dimensionResource(id = R.dimen.padding_small))
+                modifier = Modifier.padding(horizontal = dimensionResource(id = R.dimen.padding_medium))
             )
         }
     }
@@ -249,20 +251,32 @@ private fun InventoryList(
         contentPadding = contentPadding
     ) {
         items(items = itemList, key = { it.id }) { item ->
-            InventoryItem(item = item,
+            val backgroundColor = if (item.status == false) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            }
+            InventoryItem(
+                item = item,
                 modifier = Modifier
                     .padding(dimensionResource(id = R.dimen.padding_small))
-                    .clickable { onItemClick(item) })
+                    .clickable { onItemClick(item) }
+                    .background(color = backgroundColor)
+            )
         }
     }
 }
 
 @Composable
 private fun InventoryItem(
-    item: Item, modifier: Modifier = Modifier
+    item: Item,
+    modifier: Modifier = Modifier
 ) {
+    var isStrikethrough by remember { mutableStateOf(item.status) } // Track item status
+
     Card(
-        modifier = modifier, elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(dimensionResource(id = R.dimen.padding_large)),
@@ -274,6 +288,7 @@ private fun InventoryItem(
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleLarge,
+                    textDecoration = if (isStrikethrough) TextDecoration.LineThrough else TextDecoration.None // Apply strikethrough conditionally
                 )
                 Spacer(Modifier.weight(1f))
             }

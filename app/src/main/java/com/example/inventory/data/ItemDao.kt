@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ItemDao {
 
-    @Query("SELECT * from items ORDER BY id DESC")
+    @Query("SELECT * from items ORDER BY status ASC, id DESC")
     fun getAllItems(): Flow<List<Item>>
 
     @Query("SELECT * from items WHERE id = :id")

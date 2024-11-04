@@ -45,12 +45,21 @@ class ItemDetailsViewModel(
         itemsRepository.getItemStream(itemId)
             .filterNotNull()
             .map {
-                ItemDetailsUiState( itemDetails = it.toItemDetails())
+                ItemDetailsUiState(notFinished = it.status , itemDetails = it.toItemDetails())
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
                 initialValue = ItemDetailsUiState()
             )
+
+    fun markAsFinished() {
+        viewModelScope.launch {
+            val currentItem = uiState.value.itemDetails.toItem()
+            if (!currentItem.status) {
+                itemsRepository.updateItem(currentItem.copy(status = true))
+            }
+        }
+    }
     /**
      * Deletes the item from the [ItemsRepository]'s data source.
      */
@@ -67,6 +76,6 @@ class ItemDetailsViewModel(
  * UI state for ItemDetailsScreen
  */
 data class ItemDetailsUiState(
-    val outOfStock: Boolean = true,
+    val notFinished: Boolean = true,
     val itemDetails: ItemDetails = ItemDetails()
 )
