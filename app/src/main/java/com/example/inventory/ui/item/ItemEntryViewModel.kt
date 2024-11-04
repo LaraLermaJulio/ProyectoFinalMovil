@@ -72,6 +72,7 @@ data class ItemDetails(
     val id: Int = 0,
     val title: String = "",
     val type: Boolean = true,
+    val status: Boolean = false,
     val descripcion: String = "",
     val date: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 )
@@ -86,6 +87,7 @@ fun ItemDetails.toItem(): Item = Item(
     title = title,
     descripcion = descripcion,
     type = type,
+    status = status,
     //date = date
 )
 
@@ -106,5 +108,6 @@ fun Item.toItemDetails(): ItemDetails = ItemDetails(
     title = title,
     descripcion = descripcion,
     type = type,
+    status = status,
     //date = date
 )

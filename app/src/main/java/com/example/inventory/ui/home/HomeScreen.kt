@@ -160,7 +160,7 @@ fun HomeScreen(
                 }
             }
         },
-        bottomBar = {
+        /*bottomBar = {
             BottomAppBar {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -180,16 +180,17 @@ fun HomeScreen(
                     }
                 }
             }
-        },
+        },*/
         floatingActionButton = {
             FloatingActionButton(
                 onClick = navigateToItemEntry,
-                shape = MaterialTheme.shapes.medium,
+                shape = MaterialTheme.shapes.extraSmall,
                 modifier = Modifier
                     .padding(
                         end = WindowInsets.safeDrawing.asPaddingValues()
                             .calculateEndPadding(LocalLayoutDirection.current)
                     )
+                    .size(85.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -279,13 +280,3 @@ private fun InventoryItem(
         }
     }
 }
-
-
-@Preview(showBackground = true)
-@Composable
-fun HomeBodyEmptyListPreview() {
-    InventoryTheme {
-        HomeBody(listOf(), onItemClick = {})
-    }
-}
-

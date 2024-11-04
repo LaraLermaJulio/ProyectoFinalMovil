@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -57,6 +58,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.inventory.InventoryTopAppBar
 import com.example.inventory.R
@@ -94,12 +96,13 @@ fun ItemDetailsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navigateToEditItem(uiState.value.itemDetails.id) },
-                shape = MaterialTheme.shapes.medium,
+                shape = MaterialTheme.shapes.extraSmall,
                 modifier = Modifier
                     .padding(
                         end = WindowInsets.safeDrawing.asPaddingValues()
                             .calculateEndPadding(LocalLayoutDirection.current)
                     )
+                    .size(85.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
@@ -113,10 +116,6 @@ fun ItemDetailsScreen(
             itemDetailsUiState = uiState.value,
             onSellItem = {  },
             onDelete = {
-                // Note: If the user rotates the screen very fast, the operation may get cancelled
-                // and the item may not be deleted from the Database. This is because when config
-                // change occurs, the Activity will be recreated and the rememberCoroutineScope will
-                // be cancelled - since the scope is bound to composition.
                 coroutineScope.launch {
                     viewModel.deleteItem()
                     navigateBack()
@@ -154,7 +153,7 @@ private fun ItemDetailsBody(
             shape = MaterialTheme.shapes.small,
             enabled = !itemDetailsUiState.outOfStock
         ) {
-            Text(stringResource(R.string.sell))
+            Text(stringResource(R.string.finished))
         }
         OutlinedButton(
             onClick = { deleteConfirmationRequired = true },
@@ -194,7 +193,7 @@ fun ItemDetails(
             verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
         ) {
             ItemDetailsRow(
-                labelResID = R.string.item,
+                labelResID = R.string.title,
                 itemDetail = item.title,
                 modifier = Modifier.padding(
                     horizontal = dimensionResource(
@@ -203,16 +202,22 @@ fun ItemDetails(
                     )
                 )
             )
-            ItemDetailsRow(
-                labelResID = R.string.quantity_in_stock,
-                itemDetail = item.descripcion.toString(),
-                modifier = Modifier.padding(
-                    horizontal = dimensionResource(
-                        id = R.dimen
-                            .padding_medium
+            Row(
+                modifier = Modifier
+                    .padding(
+                        horizontal = dimensionResource(id = R.dimen.padding_medium)
                     )
-                )
-            )
+            ) {
+                Column {
+                    Text(
+                        text = stringResource(id = R.string.description),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = item.descripcion.toString()
+                    )
+                }
+            }
         }
 
     }

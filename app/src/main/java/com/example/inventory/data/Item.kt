@@ -29,6 +29,7 @@ data class Item(
     val id: Int = 0,
     val title: String,
     val descripcion: String,
-    val type: Boolean,
+    val type: Boolean, // 1 = task, 0 = note
+    val status: Boolean, // 1 = finished, 0 = not finished
     //val date: DateTimeFormatter
 )
