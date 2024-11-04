@@ -16,38 +16,29 @@
 
 package com.example.inventory.ui.item
 
+import android.widget.TimePicker
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.example.inventory.data.Item
 import com.example.inventory.data.ItemsRepository
+import java.sql.Time
+import java.sql.Timestamp
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
+import java.util.Date
 
-/**
- * ViewModel to validate and insert items in the Room database.
- */
 class ItemEntryViewModel(private val itemsRepository: ItemsRepository) : ViewModel() {
 
-    /**
-     * Holds current item ui state
-     */
     var itemUiState by mutableStateOf(ItemUiState())
         private set
 
-    /**
-     * Updates the [itemUiState] with the value provided in the argument. This method also triggers
-     * a validation for input values.
-     */
     fun updateUiState(itemDetails: ItemDetails) {
         itemUiState =
             ItemUiState(itemDetails = itemDetails, isEntryValid = validateInput(itemDetails))
     }
 
-    /**
-     * Inserts an [Item] in the Room database
-     */
     suspend fun saveItem() {
         if (validateInput()) {
             itemsRepository.insertItem(itemUiState.itemDetails.toItem())
@@ -61,9 +52,6 @@ class ItemEntryViewModel(private val itemsRepository: ItemsRepository) : ViewMod
     }
 }
 
-/**
- * Represents Ui State for an Item.
- */
 data class ItemUiState(
     val itemDetails: ItemDetails = ItemDetails(),
     val isEntryValid: Boolean = false
@@ -74,40 +62,29 @@ data class ItemDetails(
     val type: Boolean = true,
     val status: Boolean = false,
     val descripcion: String = "",
-    val date: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val date: String = Timestamp(System.currentTimeMillis()).toString()
 )
 
-/**
- * Extension function to convert [ItemUiState] to [Item]. If the value of [ItemDetails.price] is
- * not a valid [Double], then the price will be set to 0.0. Similarly if the value of
- * [ItemUiState] is not a valid [Int], then the quantity will be set to 0
- */
 fun ItemDetails.toItem(): Item = Item(
     id = id,
     title = title,
     descripcion = descripcion,
     type = type,
     status = status,
-    //date = date
+    date = date
 )
 
 
-/**
- * Extension function to convert [Item] to [ItemUiState]
- */
 fun Item.toItemUiState(isEntryValid: Boolean = false): ItemUiState = ItemUiState(
     itemDetails = this.toItemDetails(),
     isEntryValid = isEntryValid
 )
 
-/**
- * Extension function to convert [Item] to [ItemDetails]
- */
 fun Item.toItemDetails(): ItemDetails = ItemDetails(
     id = id,
     title = title,
     descripcion = descripcion,
     type = type,
     status = status,
-    //date = date
+    date = date
 )

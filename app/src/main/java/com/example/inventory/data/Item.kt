@@ -16,9 +16,12 @@
 
 package com.example.inventory.data
 
+import android.widget.TimePicker
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.sql.Timestamp
 import java.time.format.DateTimeFormatter
+import java.util.Date
 
 /**
  * Entity data class represents a single row in the database.
@@ -31,5 +34,5 @@ data class Item(
     val descripcion: String,
     val type: Boolean, // 1 = task, 0 = note
     val status: Boolean, // 1 = finished, 0 = not finished
-    //val date: DateTimeFormatter
+    val date: String
 )

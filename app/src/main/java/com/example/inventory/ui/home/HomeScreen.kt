@@ -103,7 +103,6 @@ fun HomeScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                // Barra superior con la barra de título y búsqueda
                 CenterAlignedTopAppBar(
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -134,7 +133,6 @@ fun HomeScreen(
                     scrollBehavior = scrollBehavior,
                 )
 
-                // TabRow se coloca después de la barra superior
                 TabRow(
                     selectedTabIndex = selectedTabIndex,
                     modifier = Modifier.fillMaxWidth()
@@ -272,7 +270,7 @@ private fun InventoryItem(
     item: Item,
     modifier: Modifier = Modifier
 ) {
-    var isStrikethrough by remember { mutableStateOf(item.status) } // Track item status
+    var isStrikethrough by remember { mutableStateOf(item.status) }
 
     Card(
         modifier = modifier,
@@ -288,10 +286,15 @@ private fun InventoryItem(
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleLarge,
-                    textDecoration = if (isStrikethrough) TextDecoration.LineThrough else TextDecoration.None // Apply strikethrough conditionally
+                    textDecoration = if (isStrikethrough) TextDecoration.LineThrough else TextDecoration.None
                 )
                 Spacer(Modifier.weight(1f))
             }
+            Text(
+                text = item.date?.toString() ?: "", // Format the date
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

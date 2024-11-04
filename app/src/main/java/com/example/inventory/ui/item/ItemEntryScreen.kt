@@ -16,6 +16,8 @@
 
 package com.example.inventory.ui.item
 
+import android.icu.text.SimpleDateFormat
+import android.net.ParseException
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -25,8 +27,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -132,6 +138,7 @@ fun ItemInputForm(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
     ) {
+
         OutlinedTextField(
             value = itemDetails.title,
             onValueChange = { onValueChange(itemDetails.copy(title = it)) },
@@ -158,6 +165,30 @@ fun ItemInputForm(
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             maxLines = 10
+        )
+        OutlinedTextField(
+            value = itemDetails.date?.toString() ?: "",
+            onValueChange = { newValue ->
+                val newDate = try {
+                    SimpleDateFormat("dd/MM/yyyy").parse(newValue)
+                } catch (e: ParseException) {
+                    null
+                }
+                onValueChange(itemDetails.copy(date = newDate.toString()))
+            },
+            label = { Text(stringResource(R.string.save_action)) },
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
+            singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { /* Open date picker */ }) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = "Select Date"
+                    )
+                }
+            }
         )
     }
 }
