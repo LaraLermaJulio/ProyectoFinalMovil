@@ -23,6 +23,7 @@ import androidx.lifecycle.ViewModel
 import com.example.inventory.data.Item
 import com.example.inventory.data.ItemsRepository
 import java.text.NumberFormat
+import java.time.format.DateTimeFormatter
 
 /**
  * ViewModel to validate and insert items in the Room database.
@@ -55,7 +56,7 @@ class ItemEntryViewModel(private val itemsRepository: ItemsRepository) : ViewMod
 
     private fun validateInput(uiState: ItemDetails = itemUiState.itemDetails): Boolean {
         return with(uiState) {
-            name.isNotBlank() && price.isNotBlank() && quantity.isNotBlank()
+            title.isNotBlank()  && descripcion.isNotBlank()
         }
     }
 }
@@ -67,12 +68,12 @@ data class ItemUiState(
     val itemDetails: ItemDetails = ItemDetails(),
     val isEntryValid: Boolean = false
 )
-
 data class ItemDetails(
     val id: Int = 0,
-    val name: String = "",
-    val price: String = "",
-    val quantity: String = "",
+    val title: String = "",
+    val type: Boolean = true,
+    val descripcion: String = "",
+    val date: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 )
 
 /**
@@ -82,14 +83,12 @@ data class ItemDetails(
  */
 fun ItemDetails.toItem(): Item = Item(
     id = id,
-    name = name,
-    price = price.toDoubleOrNull() ?: 0.0,
-    quantity = quantity.toIntOrNull() ?: 0
+    title = title,
+    descripcion = descripcion,
+    type = type,
+    //date = date
 )
 
-fun Item.formatedPrice(): String {
-    return NumberFormat.getCurrencyInstance().format(price)
-}
 
 /**
  * Extension function to convert [Item] to [ItemUiState]
@@ -104,7 +103,8 @@ fun Item.toItemUiState(isEntryValid: Boolean = false): ItemUiState = ItemUiState
  */
 fun Item.toItemDetails(): ItemDetails = ItemDetails(
     id = id,
-    name = name,
-    price = price.toString(),
-    quantity = quantity.toString()
+    title = title,
+    descripcion = descripcion,
+    type = type,
+    //date = date
 )

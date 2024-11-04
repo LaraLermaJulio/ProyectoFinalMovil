@@ -18,6 +18,7 @@ package com.example.inventory.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.time.format.DateTimeFormatter
 
 /**
  * Entity data class represents a single row in the database.
@@ -26,7 +27,8 @@ import androidx.room.PrimaryKey
 data class Item(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val name: String,
-    val price: Double,
-    val quantity: Int
+    val title: String,
+    val descripcion: String,
+    val type: Boolean,
+    //val date: DateTimeFormatter
 )

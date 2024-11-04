@@ -59,7 +59,6 @@ import com.example.inventory.InventoryTopAppBar
 import com.example.inventory.R
 import com.example.inventory.data.Item
 import com.example.inventory.ui.AppViewModelProvider
-import com.example.inventory.ui.item.formatedPrice
 import com.example.inventory.ui.navigation.NavigationDestination
 import com.example.inventory.ui.theme.InventoryTheme
 import androidx.compose.material.icons.filled.Mic
@@ -173,9 +172,9 @@ fun HomeScreen(
                     IconButton(onClick = { /* do something */ }) {
                         Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(40.dp))
                     }
-                    IconButton(onClick = { /* do something */ }) {
-                        Icon(Icons.Filled.Mic, contentDescription = "Microphone", modifier = Modifier.size(40.dp))
-                    }
+                    //IconButton(onClick = { /* do something */ }) {
+                    //    Icon(Icons.Filled.Mic, contentDescription = "Microphone", modifier = Modifier.size(40.dp))
+                    //}
                     IconButton(onClick = { /* do something */ }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete", modifier = Modifier.size(40.dp))
                     }
@@ -272,32 +271,15 @@ private fun InventoryItem(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = item.name,
+                    text = item.title,
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Spacer(Modifier.weight(1f))
-                Text(
-                    text = item.formatedPrice(),
-                    style = MaterialTheme.typography.titleMedium
-                )
             }
-            Text(
-                text = stringResource(R.string.in_stock, item.quantity),
-                style = MaterialTheme.typography.titleMedium
-            )
         }
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun HomeBodyPreview() {
-    InventoryTheme {
-        HomeBody(listOf(
-            Item(1, "Game", 100.0, 20), Item(2, "Pen", 200.0, 30), Item(3, "TV", 300.0, 50)
-        ), onItemClick = {})
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -307,12 +289,3 @@ fun HomeBodyEmptyListPreview() {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun InventoryItemPreview() {
-    InventoryTheme {
-        InventoryItem(
-            Item(1, "Game", 100.0, 20),
-        )
-    }
-}
