@@ -16,14 +16,18 @@
 
 package com.example.inventory.ui.item
 
+import android.app.DatePickerDialog
 import android.icu.text.SimpleDateFormat
 import android.net.ParseException
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -39,8 +43,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
@@ -53,8 +61,12 @@ import com.example.inventory.ui.AppViewModelProvider
 import com.example.inventory.ui.navigation.NavigationDestination
 import com.example.inventory.ui.theme.InventoryTheme
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import java.util.Currency
 import java.util.Locale
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+
 
 object ItemEntryDestination : NavigationDestination {
     override val route = "item_entry"
@@ -134,62 +146,148 @@ fun ItemInputForm(
     onValueChange: (ItemDetails) -> Unit = {},
     enabled: Boolean = true
 ) {
+    val dateText = remember { mutableStateOf(itemDetails.date?.toString() ?: "") }
+    val calendar = Calendar.getInstance()
+    val context = LocalContext.current
+
+    val isLargeScreen = LocalContext.current.resources.configuration.screenWidthDp >= 600
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
     ) {
-
-        OutlinedTextField(
-            value = itemDetails.title,
-            onValueChange = { onValueChange(itemDetails.copy(title = it)) },
-            label = { Text(stringResource(R.string.title)) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = itemDetails.descripcion,
-            onValueChange = { onValueChange(itemDetails.copy(descripcion = it)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-            label = { Text(stringResource(R.string.description)) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            maxLines = 10
-        )
-        OutlinedTextField(
-            value = itemDetails.date?.toString() ?: "",
-            onValueChange = { newValue ->
-                val newDate = try {
-                    SimpleDateFormat("dd/MM/yyyy").parse(newValue)
-                } catch (e: ParseException) {
-                    null
-                }
-                onValueChange(itemDetails.copy(date = newDate.toString()))
-            },
-            label = { Text(stringResource(R.string.save_action)) },
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            singleLine = true,
-            trailingIcon = {
-                IconButton(onClick = { /* Open date picker */ }) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = "Select Date"
-                    )
-                }
+        if (isLargeScreen) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
+            ) {
+                OutlinedTextField(
+                    value = itemDetails.title,
+                    onValueChange = { onValueChange(itemDetails.copy(title = it)) },
+                    label = { Text(stringResource(R.string.title)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = itemDetails.descripcion,
+                    onValueChange = { onValueChange(itemDetails.copy(descripcion = it)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    label = { Text(stringResource(R.string.description)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled,
+                    maxLines = 10
+                )
             }
-        )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
+            ) {
+                OutlinedTextField(
+                    value = dateText.value,
+                    onValueChange = { newValue ->
+                        dateText.value = newValue
+                    },
+                    label = { Text(stringResource(R.string.save_action)) },
+                    readOnly = true,
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled,
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth ->
+                                    calendar.set(year, month, dayOfMonth)
+                                    dateText.value = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
+                                    onValueChange(itemDetails.copy(date = calendar.time.toString()))
+                                },
+                                calendar.get(Calendar.YEAR),
+                                calendar.get(Calendar.MONTH),
+                                calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = "Select Date"
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
+            ) {
+                OutlinedTextField(
+                    value = itemDetails.title,
+                    onValueChange = { onValueChange(itemDetails.copy(title = it)) },
+                    label = { Text(stringResource(R.string.title)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = itemDetails.descripcion,
+                    onValueChange = { onValueChange(itemDetails.copy(descripcion = it)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    label = { Text(stringResource(R.string.description)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
+                    maxLines = 10
+                )
+                OutlinedTextField(
+                    value = dateText.value,
+                    onValueChange = { newValue ->
+                        dateText.value = newValue
+                    },
+                    label = { Text(stringResource(R.string.save_action)) },
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth ->
+                                    calendar.set(year, month, dayOfMonth)
+                                    dateText.value = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
+                                    onValueChange(itemDetails.copy(date = calendar.time.toString()))
+                                },
+                                calendar.get(Calendar.YEAR),
+                                calendar.get(Calendar.MONTH),
+                                calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = "Select Date"
+                            )
+                        }
+                    }
+                )
+            }
+        }
     }
 }
-
