@@ -62,7 +62,10 @@ data class ItemDetails(
     val type: Boolean = true,
     val status: Boolean = false,
     val descripcion: String = "",
-    val date: String = Timestamp(System.currentTimeMillis()).toString()
+    val date: String = Timestamp(System.currentTimeMillis()).toString(),
+    val photoUri: String? = null,
+    val videoUri: String? = null,
+    val audioUri: String? = null
 )
 
 fun ItemDetails.toItem(): Item = Item(
@@ -71,9 +74,11 @@ fun ItemDetails.toItem(): Item = Item(
     descripcion = descripcion,
     type = type,
     status = status,
-    date = date
+    date = date,
+    photoUri = photoUri,
+    videoUri = videoUri,
+    audioUri = audioUri
 )
-
 
 fun Item.toItemUiState(isEntryValid: Boolean = false): ItemUiState = ItemUiState(
     itemDetails = this.toItemDetails(),
@@ -86,5 +91,9 @@ fun Item.toItemDetails(): ItemDetails = ItemDetails(
     descripcion = descripcion,
     type = type,
     status = status,
-    date = date
+    date = date,
+    photoUri = photoUri,
+    videoUri = videoUri,
+    audioUri = audioUri
 )
+
