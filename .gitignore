@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # built application files
 *.apk
 *.ap_
@@ -34,3 +35,6 @@ proguard-project.txt
 # Android Studio/IDEA
 *.iml
 .idea
+=======
+/build
+>>>>>>> 9f45556 (Grabar audio)
