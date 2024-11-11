@@ -1,5 +1,11 @@
 package com.example.inventory.ui.home
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.media.MediaPlayer
+import android.media.MediaRecorder
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,12 +22,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -31,8 +43,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -45,19 +55,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.inventory.InventoryTopAppBar
 import com.example.inventory.R
 import com.example.inventory.data.Item
 import com.example.inventory.ui.AppViewModelProvider
 import com.example.inventory.ui.navigation.NavigationDestination
-import com.example.inventory.ui.theme.InventoryTheme
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object HomeDestination : NavigationDestination {
     override val route = "home"
@@ -74,12 +88,22 @@ fun HomeScreen(
 ) {
     val homeUiState by viewModel.homeUiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    var selectedTabIndex by remember { mutableStateOf(0) }
-
-    // screen size
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp
     val isTablet = screenWidth > 600
+    val recorder = remember { MediaRecorder() }
+    var isRecording by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var audioFilePath by remember { mutableStateOf("") }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                audioFilePath = startRecording(recorder, context)
+                isRecording = true
+            }
+        }
+    )
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -114,31 +138,55 @@ fun HomeScreen(
                     },
                     scrollBehavior = scrollBehavior,
                 )
-
-                TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    modifier = Modifier.fillMaxWidth()
+            }
+        },
+        bottomBar = {
+            BottomAppBar {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Tab(
-                        selected = selectedTabIndex == 0,
-                        onClick = { selectedTabIndex = 0 },
-                        text = {
-                            Text(
-                                text = stringResource(R.string.Tasks),
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
+                    IconButton(onClick = { /* do something */ }) {
+                        Icon(Icons.Filled.Check, contentDescription = "Check", modifier = Modifier.size(40.dp))
+                    }
+                    IconButton(onClick = { /* do something */ }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(40.dp))
+                    }
+                    IconButton(
+                        onClick = {
+                            if (isRecording) {
+                                try {
+                                    recorder.stop()
+                                    recorder.reset()
+                                    viewModel.addNewRecording(audioFilePath)
+                                    isRecording = false
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            } else {
+                                val permissionCheck = ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.RECORD_AUDIO
+                                )
+                                if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                                    audioFilePath = startRecording(recorder, context)
+                                    isRecording = true
+                                } else {
+                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            }
                         }
-                    )
-                    Tab(
-                        selected = selectedTabIndex == 1,
-                        onClick = { selectedTabIndex = 1 },
-                        text = {
-                            Text(
-                                text = stringResource(R.string.notes_personal),
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                    )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Mic,
+                            contentDescription = "Microphone",
+                            tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    IconButton(onClick = { /* do something */ }) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete", modifier = Modifier.size(40.dp))
+                    }
                 }
             }
         },
@@ -168,6 +216,20 @@ fun HomeScreen(
             isTablet = isTablet
         )
     }
+}
+
+private fun startRecording(recorder: MediaRecorder, context: android.content.Context): String {
+    val file = File(context.filesDir, "recording_${System.currentTimeMillis()}.3gp")
+    val audioFilePath = file.absolutePath
+    recorder.apply {
+        setAudioSource(MediaRecorder.AudioSource.MIC)
+        setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+        setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+        setOutputFile(audioFilePath)
+        prepare()
+        start()
+    }
+    return audioFilePath
 }
 
 @Composable
@@ -209,40 +271,18 @@ private fun InventoryList(
     modifier: Modifier = Modifier,
     isTablet: Boolean
 ) {
-    if (isTablet) {
-        LazyColumn(
-            modifier = modifier,
-            contentPadding = contentPadding
-        ) {
-            items(items = itemList.chunked(2)) { rowItems ->
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    rowItems.forEach { item ->
-                        InventoryItem(
-                            item = item,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(dimensionResource(id = R.dimen.padding_small))
-                                .clickable { onItemClick(item) }
-                                .background(color = if (item.status == false) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer)
-                        )
-                    }
-                }
-            }
-        }
-    } else {
-        LazyColumn(
-            modifier = modifier,
-            contentPadding = contentPadding
-        ) {
-            items(items = itemList, key = { it.id }) { item ->
-                InventoryItem(
-                    item = item,
-                    modifier = Modifier
-                        .padding(dimensionResource(id = R.dimen.padding_small))
-                        .clickable { onItemClick(item) }
-                        .background(color = if (item.status == false) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer)
-                )
-            }
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
+        items(items = itemList, key = { it.id }) { item ->
+            InventoryItem(
+                item = item,
+                modifier = Modifier
+                    .padding(dimensionResource(id = R.dimen.padding_small))
+                    .clickable { onItemClick(item) }
+                    .background(color = if (item.status == false) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer)
+            )
         }
     }
 }
@@ -253,6 +293,15 @@ private fun InventoryItem(
     modifier: Modifier = Modifier
 ) {
     var isStrikethrough by remember { mutableStateOf(item.status) }
+    var isPlaying by remember { mutableStateOf(false) }
+    val mediaPlayer = remember { MediaPlayer() }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    val formattedDate = try {
+        val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+        item.date?.toLongOrNull()?.let { dateFormat.format(Date(it)) } ?: item.date
+    } catch (e: Exception) {
+        "Fecha no disponible"
+    }
 
     Card(
         modifier = modifier,
@@ -271,9 +320,33 @@ private fun InventoryItem(
                     textDecoration = if (isStrikethrough) TextDecoration.LineThrough else TextDecoration.None
                 )
                 Spacer(Modifier.weight(1f))
+
+                if (item.audioUri != null) {
+                    IconButton(onClick = {
+                        if (isPlaying) {
+                            mediaPlayer.stop()
+                            isPlaying = false
+                        } else {
+                            try {
+                                mediaPlayer.reset()
+                                mediaPlayer.setDataSource(item.audioUri)
+                                mediaPlayer.prepare()
+                                mediaPlayer.start()
+                                isPlaying = true
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause Audio" else "Play Audio"
+                        )
+                    }
+                }
             }
             Text(
-                text = item.date?.toString() ?: "", // Format the date
+                text = formattedDate,
                 style = if (LocalConfiguration.current.screenWidthDp > 600) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
