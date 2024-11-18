@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -100,7 +101,8 @@ fun ItemDetailsScreen(
                 shape = MaterialTheme.shapes.extraSmall,
                 modifier = Modifier
                     .padding(
-                        end = WindowInsets.safeDrawing.asPaddingValues()
+                        end = WindowInsets.safeDrawing
+                            .asPaddingValues()
                             .calculateEndPadding(LocalLayoutDirection.current)
                     )
                     .size(85.dp)
@@ -140,6 +142,7 @@ private fun ItemDetailsBody(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
     Column(
         modifier = modifier.padding(dimensionResource(id = R.dimen.padding_medium)),
         verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
@@ -152,9 +155,21 @@ private fun ItemDetailsBody(
             onClick = onMarkAsFinished,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
-            enabled = !itemDetailsUiState.notFinished
-        ) {
-            Text(stringResource(R.string.finished))
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (!itemDetailsUiState.isFinished) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.secondary
+                }
+            )
+        ){
+            if (!itemDetailsUiState.isFinished) {
+                Text(stringResource(R.string.finished))
+            }
+            else{
+                Text(stringResource(R.string.not_finished))
+            }
+
         }
         OutlinedButton(
             onClick = { deleteConfirmationRequired = true },

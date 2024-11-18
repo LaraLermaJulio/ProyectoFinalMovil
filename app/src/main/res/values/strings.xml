@@ -35,6 +35,7 @@
     <string name="in_stock">%d in stock</string>
     <string name="quantity_req">Quantity in Stock*</string>
     <string name="save_action">Save</string>
-    <string name="finished">Finished</string>
+    <string name="finished">Mark as Finished</string>
+    <string name="not_finished">Un mark as Finished</string>
     <string name="yes">Yes</string>
 </resources>

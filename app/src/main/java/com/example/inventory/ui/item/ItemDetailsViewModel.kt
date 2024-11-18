@@ -44,7 +44,7 @@ class ItemDetailsViewModel(
         itemsRepository.getItemStream(itemId)
             .filterNotNull()
             .map {
-                ItemDetailsUiState(notFinished = it.status , itemDetails = it.toItemDetails())
+                ItemDetailsUiState(isFinished = it.status , itemDetails = it.toItemDetails())
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
@@ -54,9 +54,7 @@ class ItemDetailsViewModel(
     fun markAsFinished() {
         viewModelScope.launch {
             val currentItem = uiState.value.itemDetails.toItem()
-            if (!currentItem.status) {
-                itemsRepository.updateItem(currentItem.copy(status = true))
-            }
+            itemsRepository.updateItem(currentItem.copy(status = !currentItem.status))
         }
     }
     suspend fun deleteItem() {
@@ -72,6 +70,6 @@ class ItemDetailsViewModel(
  * UI state for ItemDetailsScreen
  */
 data class ItemDetailsUiState(
-    val notFinished: Boolean = true,
+    val isFinished: Boolean = true,
     val itemDetails: ItemDetails = ItemDetails()
 )

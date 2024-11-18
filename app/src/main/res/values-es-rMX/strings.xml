@@ -21,6 +21,7 @@
     <string name="in_stock">%d en stock</string>
     <string name="quantity_req">Cantidad en stock*</string>
     <string name="save_action">Guardar</string>
-    <string name="finished">Terminado</string>
+    <string name="finished">Marcar como Terminado</string>
+    <string name="not_finished">Desmarcar como Terminado</string>
     <string name="yes">Sí</string>
 </resources>
