@@ -16,9 +16,14 @@
 
 package com.example.inventory.ui.item
 
+import android.Manifest
 import android.app.DatePickerDialog
+import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
+import android.media.MediaRecorder
 import android.net.ParseException
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,13 +31,19 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -66,6 +77,10 @@ import java.util.Currency
 import java.util.Locale
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import java.io.File
 
 
 object ItemEntryDestination : NavigationDestination {
@@ -81,6 +96,19 @@ fun ItemEntryScreen(
     canNavigateBack: Boolean = true,
     viewModel: ItemEntryViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    val recorder = remember { MediaRecorder() }
+    var isRecording by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var audioFilePath by remember { mutableStateOf("") }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                audioFilePath = startRecording(recorder, context)
+                isRecording = true
+            }
+        }
+    )
     val coroutineScope = rememberCoroutineScope()
     Scaffold(
         topBar = {
@@ -89,7 +117,58 @@ fun ItemEntryScreen(
                 canNavigateBack = canNavigateBack,
                 navigateUp = onNavigateUp
             )
-        }
+        },
+        bottomBar = {
+            BottomAppBar {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    IconButton(onClick = { /* do something */ }) {
+                        Icon(Icons.Filled.Image, contentDescription = "Check", modifier = Modifier.size(40.dp))
+                    }
+                    IconButton(onClick = { /* do something */ }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(40.dp))
+                    }
+                    IconButton(
+                        onClick = {
+                            if (isRecording) {
+                                try {
+                                    recorder.stop()
+                                    recorder.reset()
+                                    //uiState.addNewRecording(audioFilePath)
+                                    isRecording = false
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            } else {
+                                val permissionCheck = ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.RECORD_AUDIO
+                                )
+                                if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                                    audioFilePath = startRecording(recorder, context)
+                                    isRecording = true
+                                } else {
+                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Mic,
+                            contentDescription = "Microphone",
+                            tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    IconButton(onClick = { /* do something */ }) {
+                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Delete", modifier = Modifier.size(40.dp))
+                    }
+                }
+            }
+        },
+
     ) { innerPadding ->
         ItemEntryBody(
             itemUiState = viewModel.itemUiState,
@@ -137,6 +216,20 @@ fun ItemEntryBody(
             Text(text = stringResource(R.string.save_action))
         }
     }
+}
+
+private fun startRecording(recorder: MediaRecorder, context: android.content.Context): String {
+    val file = File(context.filesDir, "recording_${System.currentTimeMillis()}.3gp")
+    val audioFilePath = file.absolutePath
+    recorder.apply {
+        setAudioSource(MediaRecorder.AudioSource.MIC)
+        setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+        setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+        setOutputFile(audioFilePath)
+        prepare()
+        start()
+    }
+    return audioFilePath
 }
 
 @Composable
