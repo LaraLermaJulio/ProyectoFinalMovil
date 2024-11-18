@@ -67,6 +67,7 @@ import com.example.inventory.ui.AppViewModelProvider
 import com.example.inventory.ui.navigation.NavigationDestination
 import com.example.inventory.ui.theme.InventoryTheme
 import kotlinx.coroutines.launch
+import toItem
 
 object ItemDetailsDestination : NavigationDestination {
     override val route = "item_details"

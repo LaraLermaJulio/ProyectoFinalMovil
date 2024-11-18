@@ -16,6 +16,8 @@
 
 package com.example.inventory.ui.item
 
+import ItemDetails
+import ItemUiState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -26,6 +28,8 @@ import com.example.inventory.data.ItemsRepository
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import toItem
+import toItemUiState
 
 /**
  * ViewModel to retrieve and update an item from the [ItemsRepository]'s data source.

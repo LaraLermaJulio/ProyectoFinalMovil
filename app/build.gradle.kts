@@ -68,6 +68,8 @@ dependencies {
     //Room
     implementation("androidx.room:room-runtime:${rootProject.extra["room_version"]}")
     implementation("androidx.core:core-ktx:1.12.0")
+    implementation("com.google.firebase:firebase-crashlytics-buildtools:3.0.2")
+    implementation ("com.google.code.gson:gson:2.8.9")
     ksp("androidx.room:room-compiler:${rootProject.extra["room_version"]}")
     implementation("androidx.room:room-ktx:${rootProject.extra["room_version"]}")
 

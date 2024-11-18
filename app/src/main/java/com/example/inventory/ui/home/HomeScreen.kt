@@ -321,28 +321,26 @@ private fun InventoryItem(
                 )
                 Spacer(Modifier.weight(1f))
 
-                if (item.audioUri != null) {
-                    IconButton(onClick = {
-                        if (isPlaying) {
-                            mediaPlayer.stop()
-                            isPlaying = false
-                        } else {
-                            try {
-                                mediaPlayer.reset()
-                                mediaPlayer.setDataSource(item.audioUri)
-                                mediaPlayer.prepare()
-                                mediaPlayer.start()
-                                isPlaying = true
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
+                IconButton(onClick = {
+                    if (isPlaying) {
+                        mediaPlayer.stop()
+                        isPlaying = false
+                    } else {
+                        try {
+                            mediaPlayer.reset()
+                            //mediaPlayer.setDataSource(item.audioUris)
+                            mediaPlayer.prepare()
+                            mediaPlayer.start()
+                            isPlaying = true
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                    }) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause Audio" else "Play Audio"
-                        )
                     }
+                }) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause Audio" else "Play Audio"
+                    )
                 }
             }
             Text(

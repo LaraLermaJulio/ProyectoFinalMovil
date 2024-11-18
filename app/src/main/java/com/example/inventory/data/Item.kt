@@ -35,7 +35,7 @@ data class Item(
     val type: Boolean, // 1 = task, 0 = note
     val status: Boolean, // 1 = finished, 0 = not finished
     val date: String,
-    val photoUri: String? = null,
-    val videoUri: String? = null,
-    val audioUri: String? = null
+    val photoUris: List<String> = emptyList(),
+    val videoUris: List<String> = emptyList(),
+    val audioUris: List<String> = emptyList()
 )

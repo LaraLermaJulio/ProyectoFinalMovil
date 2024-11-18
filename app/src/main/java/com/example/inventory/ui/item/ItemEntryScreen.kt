@@ -16,6 +16,9 @@
 
 package com.example.inventory.ui.item
 
+import ItemDetails
+import ItemEntryViewModel
+import ItemUiState
 import android.Manifest
 import android.app.DatePickerDialog
 import android.content.pm.PackageManager
@@ -100,6 +103,15 @@ fun ItemEntryScreen(
     var isRecording by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var audioFilePath by remember { mutableStateOf("") }
+
+    // Seleccionadores de imágenes y videos
+    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        uris?.let { viewModel.updateUiState(viewModel.itemUiState.itemDetails.copy(photoUris = it.map { it.toString() })) }
+    }
+    val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        uris?.let { viewModel.updateUiState(viewModel.itemUiState.itemDetails.copy(videoUris = it.map { it.toString() })) }
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -109,7 +121,9 @@ fun ItemEntryScreen(
             }
         }
     )
+
     val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
             InventoryTopAppBar(
@@ -124,11 +138,11 @@ fun ItemEntryScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    IconButton(onClick = { /* do something */ }) {
-                        Icon(Icons.Filled.Image, contentDescription = "Check", modifier = Modifier.size(40.dp))
+                    IconButton(onClick = { imageLauncher.launch("image/*") }) {
+                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(40.dp))
                     }
-                    IconButton(onClick = { /* do something */ }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(40.dp))
+                    IconButton(onClick = { videoLauncher.launch("video/*") }) {
+                        Icon(Icons.Filled.Image, contentDescription = "Add Video", modifier = Modifier.size(40.dp))
                     }
                     IconButton(
                         onClick = {
@@ -136,7 +150,9 @@ fun ItemEntryScreen(
                                 try {
                                     recorder.stop()
                                     recorder.reset()
-                                    //uiState.addNewRecording(audioFilePath)
+                                    viewModel.updateUiState(
+                                        viewModel.itemUiState.itemDetails.copy(audioUris = listOf(audioFilePath))
+                                    )
                                     isRecording = false
                                 } catch (e: Exception) {
                                     e.printStackTrace()
@@ -162,13 +178,9 @@ fun ItemEntryScreen(
                             modifier = Modifier.size(40.dp)
                         )
                     }
-                    IconButton(onClick = { /* do something */ }) {
-                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Delete", modifier = Modifier.size(40.dp))
-                    }
                 }
             }
-        },
-
+        }
     ) { innerPadding ->
         ItemEntryBody(
             itemUiState = viewModel.itemUiState,
@@ -190,6 +202,7 @@ fun ItemEntryScreen(
         )
     }
 }
+
 
 @Composable
 fun ItemEntryBody(

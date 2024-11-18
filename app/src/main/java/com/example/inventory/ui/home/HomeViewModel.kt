@@ -32,7 +32,7 @@ class HomeViewModel(private val itemsRepository: ItemsRepository) : ViewModel() 
                 type = true,
                 status = false,
                 date = getCurrentFormattedDate(),
-                audioUri = audioFilePath
+                //audioUris = audioFilePath
             )
             itemsRepository.insertItem(newItem)
         }

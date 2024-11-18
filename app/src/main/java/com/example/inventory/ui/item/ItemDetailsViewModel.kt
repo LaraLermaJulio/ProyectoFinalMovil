@@ -16,6 +16,7 @@
 
 package com.example.inventory.ui.item
 
+import ItemDetails
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,6 +27,8 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import toItem
+import toItemDetails
 
 /**
  * ViewModel to retrieve, update and delete an item from the [ItemsRepository]'s data source.
