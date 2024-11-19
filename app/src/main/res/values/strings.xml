@@ -41,4 +41,7 @@
     <string name="add_photo">add photo</string>
     <string name="add_video">add bideo</string>
     <string name="record_audio">record audio</string>
+    <string name="photo">Photos</string>
+    <string name="video">Videos</string>
+    <string name="audio">Audios</string>
 </resources>

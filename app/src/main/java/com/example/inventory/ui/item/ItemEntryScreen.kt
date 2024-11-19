@@ -25,19 +25,28 @@ import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
 import android.media.MediaRecorder
 import android.net.ParseException
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -57,6 +66,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,9 +91,13 @@ import java.util.Locale
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import coil.compose.rememberAsyncImagePainter
 import java.io.File
 
 
@@ -100,19 +114,17 @@ fun ItemEntryScreen(
     canNavigateBack: Boolean = true,
     viewModel: ItemEntryViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    val context = LocalContext.current
+    val itemUiState = viewModel.itemUiState.collectAsState().value
     val recorder = remember { MediaRecorder() }
     var isRecording by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     var audioFilePath by remember { mutableStateOf("") }
 
-    // Launchers para imágenes y videos
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        uris?.let { viewModel.updateUiState(viewModel.itemUiState.itemDetails.copy(photoUris = it.map { it.toString() })) }
+        uris?.forEach { uri ->
+            viewModel.addUri(uri.toString(), ContentType.PHOTO)
+        }
     }
-    val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        uris?.let { viewModel.updateUiState(viewModel.itemUiState.itemDetails.copy(videoUris = it.map { it.toString() })) }
-    }
-
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -126,39 +138,74 @@ fun ItemEntryScreen(
         bottomBar = {
             BottomActionButtons(
                 onAddPhotoClick = { imageLauncher.launch("image/*") },
-                onAddVideoClick = { videoLauncher.launch("video/*") },
-                onRecordAudioClick = {
-                    handleAudioRecording(
-                        context = context,
-                        recorder = recorder,
-                        isRecording = isRecording,
-                        setIsRecording = { isRecording = it },
-                        setAudioFilePath = { filePath ->
-                            audioFilePath = filePath
-                            viewModel.updateUiState(
-                                viewModel.itemUiState.itemDetails.copy(audioUris = listOf(filePath))
-                            )
-                        }
-                    )
-                },
-                isRecording = isRecording
+                onAddVideoClick = { },
+                onRecordAudioClick = {  },
+                isRecording = false
             )
         }
     ) { innerPadding ->
-        ItemEntryBody(
-            itemUiState = viewModel.itemUiState,
-            onItemValueChange = viewModel::updateUiState,
-            onSaveClick = {
-                coroutineScope.launch {
-                    viewModel.saveItem()
-                    navigateBack()
-                }
-            },
+        Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .fillMaxWidth()
-        )
+                .fillMaxSize()
+        ) {
+            ItemEntryBody(
+                itemUiState = itemUiState,
+                onItemValueChange = viewModel::updateUiState,
+                onSaveClick = {
+                    coroutineScope.launch {
+                        viewModel.saveItem()
+                        navigateBack()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+
+            MultimediaSection(
+                title = stringResource(R.string.photo),
+                uris = itemUiState.itemDetails.photoUris
+            )
+
+            MultimediaSection(
+                title = stringResource(R.string.video),
+                uris = itemUiState.itemDetails.videoUris
+            )
+
+            MultimediaSection(
+                title = stringResource(R.string.audio),
+                uris = itemUiState.itemDetails.audioUris
+            )
+        }
+    }
+
+}
+
+@Composable
+fun MultimediaSection(title: String, uris: List<String>) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(dimensionResource(id = R.dimen.padding_medium))
+    )
+    if (uris.isNotEmpty()) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_small)),
+            modifier = Modifier.padding(horizontal = dimensionResource(id = R.dimen.padding_medium))
+        ) {
+            items(uris) { uri ->
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
     }
 }
 
@@ -188,6 +235,7 @@ fun ItemEntryBody(
         }
     }
 }
+
 
 private fun startRecording(recorder: MediaRecorder, context: android.content.Context): String {
     val file = File(context.filesDir, "recording_${System.currentTimeMillis()}.3gp")

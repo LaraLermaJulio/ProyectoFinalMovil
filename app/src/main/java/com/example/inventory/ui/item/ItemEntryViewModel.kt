@@ -1,46 +1,99 @@
-import android.widget.TimePicker
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.inventory.data.Item
 import com.example.inventory.data.ItemsRepository
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
+/**
+ * ViewModel que gestiona el estado y la lógica para la entrada de items.
+ */
 class ItemEntryViewModel(private val itemsRepository: ItemsRepository) : ViewModel() {
 
-    var itemUiState by mutableStateOf(ItemUiState())
-        private set
+    // Estado observable como StateFlow
+    private val _itemUiState = MutableStateFlow(ItemUiState())
+    val itemUiState: StateFlow<ItemUiState> = _itemUiState
 
+    /**
+     * Actualiza los detalles del estado actual del item y valida la entrada.
+     */
     fun updateUiState(itemDetails: ItemDetails) {
-        itemUiState =
-            ItemUiState(itemDetails = itemDetails, isEntryValid = validateInput(itemDetails))
-    }
-
-    suspend fun saveItem() {
-        if (validateInput()) {
-            itemsRepository.insertItem(itemUiState.itemDetails.toItem())
+        _itemUiState.update {
+            it.copy(
+                itemDetails = itemDetails,
+                isEntryValid = validateInput(itemDetails)
+            )
         }
     }
 
-    private fun validateInput(uiState: ItemDetails = itemUiState.itemDetails): Boolean {
+    /**
+     * Agrega una URI válida al tipo de contenido especificado (fotos, videos, audios).
+     * Si la URI no es válida, no se realiza ninguna acción.
+     */
+    fun addUri(uri: String, type: ContentType) {
+        if (uri.isNotBlank() && validateUri(uri)) {
+            _itemUiState.update { currentState ->
+                val currentDetails = currentState.itemDetails
+                val updatedDetails = when (type) {
+                    ContentType.PHOTO -> currentDetails.copy(photoUris = currentDetails.photoUris + uri)
+                    ContentType.VIDEO -> currentDetails.copy(videoUris = currentDetails.videoUris + uri)
+                    ContentType.AUDIO -> currentDetails.copy(audioUris = currentDetails.audioUris + uri)
+                }
+                currentState.copy(itemDetails = updatedDetails)
+            }
+        }
+    }
+
+    /**
+     * Guarda el item en el repositorio si la entrada es válida.
+     */
+    fun saveItem() {
+        if (_itemUiState.value.isEntryValid) {
+            viewModelScope.launch {
+                itemsRepository.insertItem(_itemUiState.value.itemDetails.toItem())
+            }
+        }
+    }
+
+    /**
+     * Valida si los datos proporcionados son válidos.
+     */
+    private fun validateInput(uiState: ItemDetails = _itemUiState.value.itemDetails): Boolean {
         return with(uiState) {
             title.isNotBlank() &&
                     descripcion.isNotBlank() &&
                     date.isNotBlank() &&
-                    (photoUris.isEmpty() || photoUris.all { it.isNotBlank() }) &&
-                    (videoUris.isEmpty() || videoUris.all { it.isNotBlank() }) &&
-                    (audioUris.isEmpty() || audioUris.all { it.isNotBlank() })
+                    photoUris.all { validateUri(it) } &&
+                    videoUris.all { validateUri(it) } &&
+                    audioUris.all { validateUri(it) }
         }
+    }
+
+    /**
+     * Valida si una URI tiene un formato correcto.
+     */
+    private fun validateUri(uri: String): Boolean {
+        // Lógica para validar URI, puede incluir expresiones regulares u otros métodos.
+        return uri.isNotBlank() // Simplificado para este ejemplo
     }
 }
 
+/**
+ * Clase que representa el estado de la UI.
+ */
 data class ItemUiState(
     val itemDetails: ItemDetails = ItemDetails(),
     val isEntryValid: Boolean = false
 )
 
+/**
+ * Clase que contiene los detalles de un item.
+ */
 data class ItemDetails(
     val id: Int = 0,
     val title: String = "",
@@ -53,6 +106,9 @@ data class ItemDetails(
     val audioUris: List<String> = emptyList()
 )
 
+/**
+ * Convierte un objeto `ItemDetails` a `Item`.
+ */
 fun ItemDetails.toItem(): Item = Item(
     id = id,
     title = title,
@@ -65,11 +121,17 @@ fun ItemDetails.toItem(): Item = Item(
     audioUris = audioUris
 )
 
+/**
+ * Convierte un objeto `Item` a `ItemUiState`.
+ */
 fun Item.toItemUiState(isEntryValid: Boolean = false): ItemUiState = ItemUiState(
     itemDetails = this.toItemDetails(),
     isEntryValid = isEntryValid
 )
 
+/**
+ * Convierte un objeto `Item` a `ItemDetails`.
+ */
 fun Item.toItemDetails(): ItemDetails = ItemDetails(
     id = id,
     title = title,
@@ -82,3 +144,9 @@ fun Item.toItemDetails(): ItemDetails = ItemDetails(
     audioUris = audioUris
 )
 
+/**
+ * Enum para representar los tipos de contenido (foto, video, audio).
+ */
+enum class ContentType {
+    PHOTO, VIDEO, AUDIO
+}

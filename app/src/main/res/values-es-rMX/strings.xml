@@ -27,4 +27,7 @@
     <string name="add_photo">agregar foto</string>
     <string name="add_video">agregar video</string>
     <string name="record_audio">grabar audio</string>
+    <string name="photo">Fotos</string>
+    <string name="video">Videos</string>
+    <string name="audio">Audios</string>
 </resources>

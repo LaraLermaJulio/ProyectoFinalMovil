@@ -20,6 +20,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
+import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -123,9 +125,12 @@ fun ItemEditScreen(
             if (isGranted) {
                 audioFilePath = startRecording(recorder, context)
                 isRecording = true
+            } else {
+                Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
             }
         }
     )
+
     Scaffold(
         topBar = {
             InventoryTopAppBar(
@@ -140,35 +145,33 @@ fun ItemEditScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    IconButton(onClick = { /* do something */ }) {
-                        Icon(Icons.Filled.Image, contentDescription = "Check", modifier = Modifier.size(40.dp))
+                    IconButton(onClick = { /* Placeholder action */ }) {
+                        Icon(Icons.Filled.Image, contentDescription = "Image", modifier = Modifier.size(40.dp))
                     }
-                    IconButton(onClick = { /* do something */ }) {
+                    IconButton(onClick = { /* Placeholder action */ }) {
                         Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(40.dp))
                     }
                     IconButton(
                         onClick = {
-                            if (isRecording) {
-                                try {
-                                    recorder.stop()
-                                    recorder.reset()
-                                    //uiState.addNewRecording(audioFilePath)
-                                    isRecording = false
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            } else {
-                                val permissionCheck = ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.RECORD_AUDIO
-                                )
-                                if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                            handleRecording(
+                                isRecording,
+                                recorder,
+                                context,
+                                permissionLauncher,
+                                onStart = {
                                     audioFilePath = startRecording(recorder, context)
                                     isRecording = true
-                                } else {
-                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                },
+                                onStop = {
+                                    try {
+                                        recorder.stop()
+                                        recorder.reset()
+                                        isRecording = false
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
                                 }
-                            }
+                            )
                         }
                     ) {
                         Icon(
@@ -178,8 +181,8 @@ fun ItemEditScreen(
                             modifier = Modifier.size(40.dp)
                         )
                     }
-                    IconButton(onClick = { /* do something */ }) {
-                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Delete", modifier = Modifier.size(40.dp))
+                    IconButton(onClick = { /* Placeholder action */ }) {
+                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(40.dp))
                     }
                 }
             }
@@ -204,8 +207,8 @@ fun ItemEditScreen(
                 .verticalScroll(rememberScrollState())
         )
     }
-
 }
+
 private fun startRecording(recorder: MediaRecorder, context: android.content.Context): String {
     val file = File(context.filesDir, "recording_${System.currentTimeMillis()}.3gp")
     val audioFilePath = file.absolutePath
@@ -218,4 +221,27 @@ private fun startRecording(recorder: MediaRecorder, context: android.content.Con
         start()
     }
     return audioFilePath
+}
+
+private fun handleRecording(
+    isRecording: Boolean,
+    recorder: MediaRecorder,
+    context: android.content.Context,
+    permissionLauncher: ManagedActivityResultLauncher<String, Boolean>,
+    onStart: () -> Unit,
+    onStop: () -> Unit
+) {
+    if (isRecording) {
+        onStop()
+    } else {
+        val permissionCheck = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        )
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            onStart()
+        } else {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 }
