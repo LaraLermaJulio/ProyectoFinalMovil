@@ -38,4 +38,7 @@
     <string name="finished">Mark as Finished</string>
     <string name="not_finished">Un mark as Finished</string>
     <string name="yes">Yes</string>
+    <string name="add_photo">add photo</string>
+    <string name="add_video">add bideo</string>
+    <string name="record_audio">record audio</string>
 </resources>

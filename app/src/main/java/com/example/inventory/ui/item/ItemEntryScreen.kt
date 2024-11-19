@@ -82,6 +82,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.io.File
 
@@ -104,23 +105,13 @@ fun ItemEntryScreen(
     val context = LocalContext.current
     var audioFilePath by remember { mutableStateOf("") }
 
-    // Seleccionadores de imágenes y videos
+    // Launchers para imágenes y videos
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         uris?.let { viewModel.updateUiState(viewModel.itemUiState.itemDetails.copy(photoUris = it.map { it.toString() })) }
     }
     val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         uris?.let { viewModel.updateUiState(viewModel.itemUiState.itemDetails.copy(videoUris = it.map { it.toString() })) }
     }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                audioFilePath = startRecording(recorder, context)
-                isRecording = true
-            }
-        }
-    )
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -133,53 +124,25 @@ fun ItemEntryScreen(
             )
         },
         bottomBar = {
-            BottomAppBar {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    IconButton(onClick = { imageLauncher.launch("image/*") }) {
-                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(40.dp))
-                    }
-                    IconButton(onClick = { videoLauncher.launch("video/*") }) {
-                        Icon(Icons.Filled.Image, contentDescription = "Add Video", modifier = Modifier.size(40.dp))
-                    }
-                    IconButton(
-                        onClick = {
-                            if (isRecording) {
-                                try {
-                                    recorder.stop()
-                                    recorder.reset()
-                                    viewModel.updateUiState(
-                                        viewModel.itemUiState.itemDetails.copy(audioUris = listOf(audioFilePath))
-                                    )
-                                    isRecording = false
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            } else {
-                                val permissionCheck = ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.RECORD_AUDIO
-                                )
-                                if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-                                    audioFilePath = startRecording(recorder, context)
-                                    isRecording = true
-                                } else {
-                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                }
-                            }
+            BottomActionButtons(
+                onAddPhotoClick = { imageLauncher.launch("image/*") },
+                onAddVideoClick = { videoLauncher.launch("video/*") },
+                onRecordAudioClick = {
+                    handleAudioRecording(
+                        context = context,
+                        recorder = recorder,
+                        isRecording = isRecording,
+                        setIsRecording = { isRecording = it },
+                        setAudioFilePath = { filePath ->
+                            audioFilePath = filePath
+                            viewModel.updateUiState(
+                                viewModel.itemUiState.itemDetails.copy(audioUris = listOf(filePath))
+                            )
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Mic,
-                            contentDescription = "Microphone",
-                            tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
-                }
-            }
+                    )
+                },
+                isRecording = isRecording
+            )
         }
     ) { innerPadding ->
         ItemEntryBody(
@@ -192,17 +155,12 @@ fun ItemEntryScreen(
                 }
             },
             modifier = Modifier
-                .padding(
-                    start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
-                    top = innerPadding.calculateTopPadding(),
-                    end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
-                )
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .fillMaxWidth()
         )
     }
 }
-
 
 @Composable
 fun ItemEntryBody(
@@ -244,6 +202,77 @@ private fun startRecording(recorder: MediaRecorder, context: android.content.Con
     }
     return audioFilePath
 }
+
+@Composable
+fun BottomActionButtons(
+    onAddPhotoClick: () -> Unit,
+    onAddVideoClick: () -> Unit,
+    onRecordAudioClick: () -> Unit,
+    isRecording: Boolean
+) {
+    BottomAppBar {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            IconButton(onClick = onAddPhotoClick) {
+                Icon(
+                    Icons.Filled.AddAPhoto,
+                    contentDescription = stringResource(R.string.add_photo),
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            IconButton(onClick = onAddVideoClick) {
+                Icon(
+                    Icons.Filled.Image,
+                    contentDescription = stringResource(R.string.add_video),
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            IconButton(onClick = onRecordAudioClick) {
+                Icon(
+                    imageVector = Icons.Filled.Mic,
+                    contentDescription = stringResource(R.string.record_audio),
+                    tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+        }
+    }
+}
+
+
+private fun handleAudioRecording(
+    context: android.content.Context,
+    recorder: MediaRecorder,
+    isRecording: Boolean,
+    setIsRecording: (Boolean) -> Unit,
+    setAudioFilePath: (String) -> Unit
+) {
+    if (isRecording) {
+        try {
+            recorder.stop()
+            recorder.reset()
+            setIsRecording(false)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    } else {
+        val permissionCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            val filePath = startRecording(recorder, context)
+            setAudioFilePath(filePath)
+            setIsRecording(true)
+        } else {
+            ActivityCompat.requestPermissions(
+                context as android.app.Activity,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                1
+            )
+        }
+    }
+}
+
 
 @Composable
 fun ItemInputForm(

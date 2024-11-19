@@ -47,7 +47,7 @@ data class ItemDetails(
     val type: Boolean = true,
     val status: Boolean = false,
     val descripcion: String = "",
-    val date: String = "", // Fecha inicializada explícitamente
+    val date: String = "",
     val photoUris: List<String> = emptyList(),
     val videoUris: List<String> = emptyList(),
     val audioUris: List<String> = emptyList()

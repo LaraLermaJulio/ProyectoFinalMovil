@@ -46,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -320,29 +321,44 @@ private fun InventoryItem(
                     textDecoration = if (isStrikethrough) TextDecoration.LineThrough else TextDecoration.None
                 )
                 Spacer(Modifier.weight(1f))
+            }
 
-                IconButton(onClick = {
-                    if (isPlaying) {
-                        mediaPlayer.stop()
-                        isPlaying = false
-                    } else {
-                        try {
-                            mediaPlayer.reset()
-                            //mediaPlayer.setDataSource(item.audioUris)
-                            mediaPlayer.prepare()
-                            mediaPlayer.start()
-                            isPlaying = true
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause Audio" else "Play Audio"
+            item.audioUris.forEachIndexed { index, uri ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Audio ${index + 1}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
                     )
+                    IconButton(
+                        onClick = {
+                            if (isPlaying) {
+                                mediaPlayer.stop()
+                                isPlaying = false
+                            } else {
+                                try {
+                                    mediaPlayer.reset()
+                                    mediaPlayer.setDataSource(uri)
+                                    mediaPlayer.prepare()
+                                    mediaPlayer.start()
+                                    isPlaying = true
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause Audio" else "Play Audio"
+                        )
+                    }
                 }
             }
+
             Text(
                 text = formattedDate,
                 style = if (LocalConfiguration.current.screenWidthDp > 600) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
@@ -350,4 +366,14 @@ private fun InventoryItem(
             )
         }
     }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (mediaPlayer.isPlaying) {
+                mediaPlayer.stop()
+            }
+            mediaPlayer.release()
+        }
+    }
 }
+
