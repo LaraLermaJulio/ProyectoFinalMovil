@@ -23,6 +23,7 @@ import android.Manifest
 import android.app.DatePickerDialog
 import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
+import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.ParseException
 import android.widget.Toast
@@ -55,6 +56,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,6 +69,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -115,16 +119,40 @@ fun ItemEntryScreen(
     viewModel: ItemEntryViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val context = LocalContext.current
-    val itemUiState = viewModel.itemUiState.collectAsState().value
-    val recorder = remember { MediaRecorder() }
+    var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var isRecording by remember { mutableStateOf(false) }
     var audioFilePath by remember { mutableStateOf("") }
+
+    // Launcher para solicitar permisos
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                audioFilePath = startRecording(context).also {
+                    recorder = MediaRecorder().apply {
+                        setAudioSource(MediaRecorder.AudioSource.MIC)
+                        setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                        setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                        setOutputFile(it)
+                        prepare()
+                        start()
+                    }
+                    isRecording = true
+                }
+            } else {
+                Toast.makeText(context, "Permiso denegado para grabar audio", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    val itemUiState = viewModel.itemUiState.collectAsState().value
 
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         uris?.forEach { uri ->
             viewModel.addUri(uri.toString(), ContentType.PHOTO)
         }
     }
+
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -138,9 +166,49 @@ fun ItemEntryScreen(
         bottomBar = {
             BottomActionButtons(
                 onAddPhotoClick = { imageLauncher.launch("image/*") },
-                onAddVideoClick = { },
-                onRecordAudioClick = {  },
-                isRecording = false
+                onAddVideoClick = { /* Implementar si es necesario */ },
+                onRecordAudioClick = {
+                    if (isRecording) {
+
+                        try {
+                            recorder?.apply {
+                                stop()
+                                reset()
+                                release()
+                            }
+                            recorder = null
+                            viewModel.addUri(audioFilePath, ContentType.AUDIO)
+                            isRecording = false
+                            Toast.makeText(context, "Grabación guardada", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    } else {
+
+                        val permissionCheck = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.RECORD_AUDIO
+                        )
+                        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+
+                            audioFilePath = startRecording(context).also {
+                                recorder = MediaRecorder().apply {
+                                    setAudioSource(MediaRecorder.AudioSource.MIC)
+                                    setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                                    setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                                    setOutputFile(it)
+                                    prepare()
+                                    start()
+                                }
+                                isRecording = true
+                            }
+                        } else {
+
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
+                },
+                isRecording = isRecording
             )
         }
     ) { innerPadding ->
@@ -159,8 +227,7 @@ fun ItemEntryScreen(
                         navigateBack()
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             )
 
             MultimediaSection(
@@ -179,8 +246,14 @@ fun ItemEntryScreen(
             )
         }
     }
-
 }
+
+
+private fun startRecording(context: android.content.Context): String {
+    val file = File(context.filesDir, "recording_${System.currentTimeMillis()}.3gp")
+    return file.absolutePath
+}
+
 
 @Composable
 fun MultimediaSection(title: String, uris: List<String>) {
@@ -195,19 +268,71 @@ fun MultimediaSection(title: String, uris: List<String>) {
             modifier = Modifier.padding(horizontal = dimensionResource(id = R.dimen.padding_medium))
         ) {
             items(uris) { uri ->
-                Image(
-                    painter = rememberAsyncImagePainter(uri),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                if (title == stringResource(R.string.audio)) {
+                    AudioItem(uri = uri)
+                } else {
+                    Image(
+                        painter = rememberAsyncImagePainter(uri),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
         }
     }
 }
+
+@Composable
+fun AudioItem(uri: String) {
+    var isPlaying by remember { mutableStateOf(false) }
+    val mediaPlayer = remember {
+        MediaPlayer() // No asignar directamente en remember, solo crearlo
+    }
+
+    IconButton(
+        onClick = {
+            if (isPlaying) {
+                mediaPlayer.stop()
+                isPlaying = false
+            } else {
+                try {
+                    mediaPlayer.reset()
+                    mediaPlayer.setDataSource(uri)
+                    mediaPlayer.prepare()
+                    mediaPlayer.start()
+                    isPlaying = true
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        },
+        modifier = Modifier
+            .size(80.dp)
+            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
+    ) {
+        Icon(
+            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+            contentDescription = if (isPlaying) "Pause Audio" else "Play Audio"
+        )
+    }
+
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (mediaPlayer.isPlaying) {
+                mediaPlayer.stop()
+            }
+            mediaPlayer.release()
+        }
+    }
+}
+
+
 
 @Composable
 fun ItemEntryBody(
