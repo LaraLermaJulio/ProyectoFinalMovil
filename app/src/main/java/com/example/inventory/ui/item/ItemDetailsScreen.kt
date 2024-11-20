@@ -16,7 +16,11 @@
 
 package com.example.inventory.ui.item
 
+import android.media.MediaPlayer
+import android.net.Uri
+import android.widget.VideoView
 import androidx.annotation.StringRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +30,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -47,20 +52,26 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberImagePainter
 import com.example.inventory.InventoryTopAppBar
 import com.example.inventory.R
 import com.example.inventory.data.Item
@@ -142,15 +153,32 @@ private fun ItemDetailsBody(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-
     Column(
         modifier = modifier.padding(dimensionResource(id = R.dimen.padding_medium)),
         verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
     ) {
         var deleteConfirmationRequired by rememberSaveable { mutableStateOf(false) }
-        ItemDetails(
-            item = itemDetailsUiState.itemDetails.toItem(), modifier = Modifier.fillMaxWidth()
+
+        // Mostrar los detalles del ítem
+        ItemDetails(item = itemDetailsUiState.itemDetails.toItem(), modifier = Modifier.fillMaxWidth())
+
+        // Mostrar multimedia
+        MultimediaSection(
+            title = stringResource(R.string.photo),
+            uris = itemDetailsUiState.itemDetails.photoUris
         )
+
+        MultimediaSection(
+            title = stringResource(R.string.video),
+            uris = itemDetailsUiState.itemDetails.videoUris
+        )
+
+        MultimediaSection(
+            title = stringResource(R.string.audio),
+            uris = itemDetailsUiState.itemDetails.audioUris
+        )
+
+        // Botones para cambiar el estado del ítem y eliminarlo
         Button(
             onClick = onMarkAsFinished,
             modifier = Modifier.fillMaxWidth(),
@@ -162,15 +190,14 @@ private fun ItemDetailsBody(
                     MaterialTheme.colorScheme.secondary
                 }
             )
-        ){
+        ) {
             if (!itemDetailsUiState.isFinished) {
                 Text(stringResource(R.string.finished))
-            }
-            else{
+            } else {
                 Text(stringResource(R.string.not_finished))
             }
-
         }
+
         OutlinedButton(
             onClick = { deleteConfirmationRequired = true },
             shape = MaterialTheme.shapes.small,
@@ -178,6 +205,7 @@ private fun ItemDetailsBody(
         ) {
             Text(stringResource(R.string.delete))
         }
+
         if (deleteConfirmationRequired) {
             DeleteConfirmationDialog(
                 onDeleteConfirm = {
@@ -190,6 +218,90 @@ private fun ItemDetailsBody(
         }
     }
 }
+
+@Composable
+fun MultimediaSection(
+    title: String,
+    uris: List<String>,
+    modifier: Modifier = Modifier
+) {
+    if (uris.isNotEmpty()) {
+        Column(modifier = modifier) {
+            Text(text = title, fontWeight = FontWeight.Bold)
+            uris.forEach { uri ->
+                when {
+                    uri.endsWith(".jpg") || uri.endsWith(".png") -> {
+                        ImagePreview(uri)
+                    }
+                    uri.endsWith(".mp4") -> {
+                        VideoPreview(uri)
+                    }
+                    uri.endsWith(".mp3") || uri.endsWith(".wav") -> {
+                        AudioPreview(uri)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ImagePreview(uri: String) {
+    val imagePainter = rememberImagePainter(uri)
+    Image(
+        painter = imagePainter,
+        contentDescription = "Imagen del ítem",
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        contentScale = ContentScale.Crop
+    )
+}
+
+@Composable
+fun VideoPreview(uri: String) {
+    AndroidView(
+        factory = { context ->
+            VideoView(context).apply {
+                setVideoURI(Uri.parse(uri))
+                setOnPreparedListener {
+                    start()
+                }
+                setOnCompletionListener {
+                    // Aquí puedes manejar la finalización del video
+                }
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+    )
+}
+
+@Composable
+fun AudioPreview(uri: String) {
+    val mediaPlayer = remember { MediaPlayer() }
+    val context = LocalContext.current
+
+    DisposableEffect(context) {
+        mediaPlayer.setDataSource(context, Uri.parse(uri))
+        mediaPlayer.prepareAsync()
+        onDispose {
+            mediaPlayer.release()
+        }
+    }
+
+    Button(onClick = {
+        if (!mediaPlayer.isPlaying) {
+            mediaPlayer.start()
+        } else {
+            mediaPlayer.pause()
+        }
+    }) {
+        Text(text = if (mediaPlayer.isPlaying) "Pausar audio" else "Reproducir audio")
+    }
+}
+
 
 
 @Composable
