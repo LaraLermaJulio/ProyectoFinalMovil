@@ -21,11 +21,15 @@ import ItemEntryViewModel
 import ItemUiState
 import android.Manifest
 import android.app.DatePickerDialog
+import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.icu.text.SimpleDateFormat
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.ParseException
+import android.net.Uri
+import android.os.Environment
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,7 +56,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
@@ -101,6 +107,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
 import java.io.File
 
@@ -128,16 +135,24 @@ fun ItemEntryScreen(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             if (isGranted) {
-                audioFilePath = startRecording(context).also {
-                    recorder = MediaRecorder().apply {
-                        setAudioSource(MediaRecorder.AudioSource.MIC)
-                        setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-                        setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-                        setOutputFile(it)
-                        prepare()
-                        start()
+                // Si el permiso es concedido, intentar grabar
+                if (isRecording) {
+                    audioFilePath = startRecording(context).also {
+                        recorder = MediaRecorder().apply {
+                            try {
+                                setAudioSource(MediaRecorder.AudioSource.MIC)
+                                setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                                setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                                setOutputFile(it)
+                                prepare()
+                                start()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Error al iniciar la grabación", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        isRecording = true
                     }
-                    isRecording = true
                 }
             } else {
                 Toast.makeText(context, "Permiso denegado para grabar audio", Toast.LENGTH_SHORT).show()
@@ -153,6 +168,41 @@ fun ItemEntryScreen(
         }
     }
 
+    // Launcher para capturar fotos desde la cámara
+    val photoCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        bitmap?.let {
+            val uri = saveBitmapToFile(context, it)
+            viewModel.addUri(uri.toString(), ContentType.PHOTO)
+        }
+    }
+    // Definir videoFile en el alcance adecuado
+    val videoFile = File(
+        context.getExternalFilesDir(Environment.DIRECTORY_MOVIES),
+        "video_${System.currentTimeMillis()}.mp4"
+    )
+    // Launcher para grabar video
+    val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { success ->
+        if (success) {
+            // Si la grabación fue exitosa, obtener el video grabado y agregarlo
+            val videoUri = FileProvider.getUriForFile(
+                context,
+                "com.example.inventory.provider",
+                videoFile
+            )
+            viewModel.addUri(videoUri.toString(), ContentType.VIDEO)
+            Toast.makeText(context, "Video guardado correctamente", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Error al grabar el video", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+    val videoUri = FileProvider.getUriForFile(
+        context,
+        "com.example.inventory.provider",
+        videoFile
+    )
+
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -166,10 +216,39 @@ fun ItemEntryScreen(
         bottomBar = {
             BottomActionButtons(
                 onAddPhotoClick = { imageLauncher.launch("image/*") },
-                onAddVideoClick = { /* Implementar si es necesario */ },
+                onAddPhotoFromCameraClick = {
+                    // Solicitar permiso para usar la cámara
+                    val cameraPermissionCheck = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.CAMERA
+                    )
+                    if (cameraPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+                        photoCameraLauncher.launch(null)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                },
+                onAddVideoClick = {
+                    // Solicitar permisos de grabación de video si no están concedidos
+                    val videoPermissionCheck = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.CAMERA
+                    )
+                    val storagePermissionCheck = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    )
+
+                    if (videoPermissionCheck == PackageManager.PERMISSION_GRANTED && storagePermissionCheck == PackageManager.PERMISSION_GRANTED) {
+                        videoLauncher.launch(videoUri)
+                    } else {
+                        // Solicitar permisos
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                        permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    }
+                },
                 onRecordAudioClick = {
                     if (isRecording) {
-
                         try {
                             recorder?.apply {
                                 stop()
@@ -182,28 +261,31 @@ fun ItemEntryScreen(
                             Toast.makeText(context, "Grabación guardada", Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
                             e.printStackTrace()
+                            Toast.makeText(context, "Error al detener la grabación", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-
-                        val permissionCheck = ContextCompat.checkSelfPermission(
+                        val audioPermissionCheck = ContextCompat.checkSelfPermission(
                             context,
                             Manifest.permission.RECORD_AUDIO
                         )
-                        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-
-                            audioFilePath = startRecording(context).also {
-                                recorder = MediaRecorder().apply {
-                                    setAudioSource(MediaRecorder.AudioSource.MIC)
-                                    setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-                                    setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-                                    setOutputFile(it)
-                                    prepare()
-                                    start()
+                        if (audioPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+                            try {
+                                audioFilePath = startRecording(context).also {
+                                    recorder = MediaRecorder().apply {
+                                        setAudioSource(MediaRecorder.AudioSource.MIC)
+                                        setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                                        setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                                        setOutputFile(it)
+                                        prepare()
+                                        start()
+                                    }
+                                    isRecording = true
                                 }
-                                isRecording = true
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Error al iniciar la grabación", Toast.LENGTH_SHORT).show()
                             }
                         } else {
-
                             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         }
                     }
@@ -223,8 +305,13 @@ fun ItemEntryScreen(
                 onItemValueChange = viewModel::updateUiState,
                 onSaveClick = {
                     coroutineScope.launch {
-                        viewModel.saveItem()
-                        navigateBack()
+                        try {
+                            viewModel.saveItem()
+                            navigateBack()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            Toast.makeText(context, "Error al guardar el ítem", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -246,6 +333,13 @@ fun ItemEntryScreen(
             )
         }
     }
+}
+
+
+fun saveBitmapToFile(context: Context, bitmap: Bitmap): Uri {
+    val file = File(context.cacheDir, "${System.currentTimeMillis()}.jpg")
+    file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it) }
+    return FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
 }
 
 
@@ -290,7 +384,7 @@ fun MultimediaSection(title: String, uris: List<String>) {
 fun AudioItem(uri: String) {
     var isPlaying by remember { mutableStateOf(false) }
     val mediaPlayer = remember {
-        MediaPlayer() // No asignar directamente en remember, solo crearlo
+        MediaPlayer()
     }
 
     IconButton(
@@ -381,6 +475,7 @@ fun BottomActionButtons(
     onAddPhotoClick: () -> Unit,
     onAddVideoClick: () -> Unit,
     onRecordAudioClick: () -> Unit,
+    onAddPhotoFromCameraClick: () -> Unit,
     isRecording: Boolean
 ) {
     BottomAppBar {
@@ -390,6 +485,13 @@ fun BottomActionButtons(
         ) {
             IconButton(onClick = onAddPhotoClick) {
                 Icon(
+                    Icons.Filled.AttachFile,
+                    contentDescription = stringResource(R.string.add_photo),
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            IconButton(onClick = onAddPhotoFromCameraClick) {
+                Icon(
                     Icons.Filled.AddAPhoto,
                     contentDescription = stringResource(R.string.add_photo),
                     modifier = Modifier.size(40.dp)
@@ -397,14 +499,14 @@ fun BottomActionButtons(
             }
             IconButton(onClick = onAddVideoClick) {
                 Icon(
-                    Icons.Filled.Image,
+                    Icons.Filled.Camera,
                     contentDescription = stringResource(R.string.add_video),
                     modifier = Modifier.size(40.dp)
                 )
             }
             IconButton(onClick = onRecordAudioClick) {
                 Icon(
-                    imageVector = Icons.Filled.Mic,
+                    Icons.Filled.Mic,
                     contentDescription = stringResource(R.string.record_audio),
                     tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(40.dp)
