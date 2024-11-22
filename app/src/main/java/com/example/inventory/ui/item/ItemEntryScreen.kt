@@ -37,6 +37,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 
@@ -45,6 +46,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -63,7 +65,9 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
@@ -118,6 +122,7 @@ import java.io.File
 import com.google.android.exoplayer2.MediaItem
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.ui.PlayerView
 import com.example.inventory.ui.item.MultimediaSection
@@ -342,6 +347,70 @@ private fun startRecording(context: android.content.Context): String {
 
 
 @Composable
+fun ImageItem(uri: String) {
+
+    var showFullScreenDialog by remember { mutableStateOf(false) }
+
+
+    Box(
+        modifier = Modifier
+            .size(200.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+            .clickable { showFullScreenDialog = true }
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(uri),
+            contentDescription = null,
+            modifier = Modifier.matchParentSize(),
+            contentScale = ContentScale.Crop
+        )
+    }
+
+
+    if (showFullScreenDialog) {
+        Dialog(
+            onDismissRequest = {
+                showFullScreenDialog = false
+            }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .align(Alignment.Center)
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+
+
+                IconButton(
+                    onClick = { showFullScreenDialog = false },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), RoundedCornerShape(50))
+                        .size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close Fullscreen Image",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun MultimediaSection(title: String, uris: List<String>) {
     Text(
         text = title,
@@ -362,15 +431,7 @@ fun MultimediaSection(title: String, uris: List<String>) {
                         VideoItem(uri = uri)
                     }
                     else -> {
-                        Image(
-                            painter = rememberAsyncImagePainter(uri),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+                        ImageItem(uri = uri)
                     }
                 }
             }
@@ -552,6 +613,10 @@ fun VideoItem(uri: String) {
     val context = LocalContext.current
     val videoUri = Uri.parse(uri)
 
+
+    var showFullScreenDialog by remember { mutableStateOf(false) }
+
+
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(videoUri))
@@ -567,7 +632,6 @@ fun VideoItem(uri: String) {
             .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
-
         AndroidView(
             factory = {
                 PlayerView(context).apply {
@@ -577,7 +641,70 @@ fun VideoItem(uri: String) {
             },
             modifier = Modifier.matchParentSize()
         )
+
+
+        IconButton(
+            onClick = { showFullScreenDialog = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), RoundedCornerShape(50))
+                .size(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Fullscreen,
+                contentDescription = "Expand Video",
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
+        }
     }
+
+
+    if (showFullScreenDialog) {
+        Dialog(
+            onDismissRequest = {
+                showFullScreenDialog = false
+                exoPlayer.pause()
+            }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                AndroidView(
+                    factory = {
+                        PlayerView(context).apply {
+                            player = exoPlayer
+                            useController = true
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center)
+                )
+
+
+                IconButton(
+                    onClick = {
+                        showFullScreenDialog = false
+                        exoPlayer.pause()
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), RoundedCornerShape(50))
+                        .size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close Fullscreen Video",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    }
+
 
     DisposableEffect(Unit) {
         onDispose {
