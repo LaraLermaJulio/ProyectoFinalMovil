@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.inventory"
@@ -77,6 +77,9 @@ dependencies {
     implementation ("com.google.code.gson:gson:2.8.9")
     ksp("androidx.room:room-compiler:${rootProject.extra["room_version"]}")
     implementation("androidx.room:room-ktx:${rootProject.extra["room_version"]}")
+
+    //notification
+    implementation("androidx.core:core:1.15.0")
 
     // Testing
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

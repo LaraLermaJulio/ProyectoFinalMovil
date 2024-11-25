@@ -20,9 +20,13 @@ import ItemDetails
 import ItemEntryViewModel
 import ItemUiState
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.AlarmManager
 import android.app.DatePickerDialog
+import android.app.PendingIntent
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.icu.text.SimpleDateFormat
@@ -30,7 +34,9 @@ import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.ParseException
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -128,7 +134,7 @@ import androidx.compose.ui.window.Dialog
 import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.ui.PlayerView
 import com.example.inventory.ui.item.MultimediaSection
-
+import java.util.Date
 
 
 object ItemEntryDestination : NavigationDestination {
@@ -150,6 +156,7 @@ fun ItemEntryScreen(
     var audioFilePath by remember { mutableStateOf("") }
 
     val itemUiState = viewModel.itemUiState.collectAsState().value
+
 
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         uris?.forEach { uri ->
@@ -904,30 +911,40 @@ fun ItemInputForm(
                     singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = {
+                            // Mostrar el DatePickerDialog primero
                             DatePickerDialog(
                                 context,
                                 { _, year, month, dayOfMonth ->
+                                    // Configurar la fecha seleccionada
                                     calendar.set(year, month, dayOfMonth)
 
+                                    // Actualizar la fecha seleccionada en el campo
                                     dateText.value = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
 
+                                    // Mostrar el TimePickerDialog para seleccionar la hora
                                     TimePickerDialog(
                                         context,
                                         { _, hourOfDay, minute ->
+                                            // Configurar la hora seleccionada
                                             calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
                                             calendar.set(Calendar.MINUTE, minute)
-                                            calendar.set(Calendar.SECOND, 0)
+                                            calendar.set(Calendar.SECOND, 0) // Establecer segundos en 0
 
+                                            // Actualizar el texto con fecha y hora seleccionadas
                                             dateText.value = SimpleDateFormat(
-                                                "dd/MM/yyyy HH:mm",
+                                                "dd/MM/yyyy HH:mm:ss",
                                                 Locale.getDefault()
                                             ).format(calendar.time)
 
+                                            // Notificar el cambio al modelo de datos
                                             onValueChange(itemDetails.copy(date = calendar.time.toString()))
+
+                                            // Configurar la alarma
+                                            setAlarm(context, calendar.timeInMillis, itemDetails.title)
                                         },
                                         calendar.get(Calendar.HOUR_OF_DAY),
                                         calendar.get(Calendar.MINUTE),
-                                        true
+                                        true // Usar formato de 24 horas
                                     ).show()
                                 },
                                 calendar.get(Calendar.YEAR),
@@ -943,7 +960,34 @@ fun ItemInputForm(
                     }
                 )
 
+
+
             }
         }
+
     }
+
+
+
+}
+
+@SuppressLint("ScheduleExactAlarm")
+fun setAlarm(context: Context, triggerAtMillis: Long, itemTitle: String) {
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    val intent = Intent(context, AlarmReceiver::class.java).apply {
+        action = "com.example.SET_ALARM"
+        putExtra("item_title", itemTitle)
+    }
+
+    val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        triggerAtMillis.toInt(),
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    Log.d("AlarmDebug", "Configurando alarma para: ${Date(triggerAtMillis)}")
+
+    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
 }
