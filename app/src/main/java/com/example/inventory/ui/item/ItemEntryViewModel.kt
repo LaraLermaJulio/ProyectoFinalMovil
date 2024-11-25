@@ -49,6 +49,9 @@ class ItemEntryViewModel(private val itemsRepository: ItemsRepository) : ViewMod
         }
     }
 
+
+
+
     /**
      * Guarda el item en el repositorio si la entrada es válida.
      */

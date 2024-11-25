@@ -16,6 +16,7 @@
 
 package com.example.inventory.ui.item
 
+import ContentType
 import ItemDetails
 import ItemUiState
 import androidx.compose.runtime.getValue
@@ -64,6 +65,31 @@ class ItemEditViewModel(
             itemsRepository.updateItem(itemUiState.itemDetails.toItem())
         }
     }
+    suspend fun updateItem(uri: String, type: ContentType) {
+        val updatedDetails = when (type) {
+            ContentType.PHOTO -> itemUiState.itemDetails.copy(photoUris = itemUiState.itemDetails.photoUris + uri)
+            ContentType.VIDEO -> itemUiState.itemDetails.copy(videoUris = itemUiState.itemDetails.videoUris + uri)
+            ContentType.AUDIO -> itemUiState.itemDetails.copy(audioUris = itemUiState.itemDetails.audioUris + uri)
+        }
+
+        // Actualizar el ítem con los nuevos detalles
+        if (validateInput(updatedDetails)) {
+            itemsRepository.updateItem(updatedDetails.toItem())
+            reloadItem()
+        }
+    }
+
+    private suspend fun reloadItem() {
+        itemUiState = itemsRepository.getItemStream(itemId)
+            .filterNotNull()
+            .first()
+            .toItemUiState(true)
+    }
+
+    private fun validateUri(uri: String): Boolean {
+        return uri.isNotBlank()
+    }
+
 
     /**
      * Updates the [itemUiState] with the value provided in the argument. This method also triggers

@@ -21,6 +21,7 @@ import ItemEntryViewModel
 import ItemUiState
 import android.Manifest
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -61,6 +62,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -339,7 +341,7 @@ fun saveBitmapToFile(context: Context, bitmap: Bitmap): Uri {
     return FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
 }
 
-private fun startRecording(context: android.content.Context): String {
+public fun startRecording(context: android.content.Context): String {
     val file = File(context.filesDir, "recording_${System.currentTimeMillis()}.3gp")
     return file.absolutePath
 }
@@ -818,26 +820,47 @@ fun ItemInputForm(
                     singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = {
-                            DatePickerDialog(
+                            val datePickerDialog = DatePickerDialog(
                                 context,
                                 { _, year, month, dayOfMonth ->
                                     calendar.set(year, month, dayOfMonth)
-                                    dateText.value = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
-                                    onValueChange(itemDetails.copy(date = calendar.time.toString()))
+
+                                    val timePickerDialog = TimePickerDialog(
+                                        context,
+                                        { _, hourOfDay, minute ->
+                                            calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                            calendar.set(Calendar.MINUTE, minute)
+
+                                            dateText.value = SimpleDateFormat(
+                                                "dd/MM/yyyy HH:mm",
+                                                Locale.getDefault()
+                                            ).format(calendar.time)
+                                            onValueChange(itemDetails.copy(date = calendar.time.toString()))
+                                        },
+                                        calendar.get(Calendar.HOUR_OF_DAY),
+                                        calendar.get(Calendar.MINUTE),
+                                        true // formato de 24 horas
+                                    )
+                                    timePickerDialog.show()
                                 },
                                 calendar.get(Calendar.YEAR),
                                 calendar.get(Calendar.MONTH),
                                 calendar.get(Calendar.DAY_OF_MONTH)
-                            ).show()
+                            )
+                            datePickerDialog.show()
                         }) {
                             Icon(
                                 imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = "Select Date"
+                                contentDescription = "Select Date and Time"
                             )
                         }
                     }
                 )
             }
+
+
+
+
         } else {
             Column(
                 verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
@@ -885,8 +908,27 @@ fun ItemInputForm(
                                 context,
                                 { _, year, month, dayOfMonth ->
                                     calendar.set(year, month, dayOfMonth)
+
                                     dateText.value = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
-                                    onValueChange(itemDetails.copy(date = calendar.time.toString()))
+
+                                    TimePickerDialog(
+                                        context,
+                                        { _, hourOfDay, minute ->
+                                            calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                            calendar.set(Calendar.MINUTE, minute)
+                                            calendar.set(Calendar.SECOND, 0)
+
+                                            dateText.value = SimpleDateFormat(
+                                                "dd/MM/yyyy HH:mm",
+                                                Locale.getDefault()
+                                            ).format(calendar.time)
+
+                                            onValueChange(itemDetails.copy(date = calendar.time.toString()))
+                                        },
+                                        calendar.get(Calendar.HOUR_OF_DAY),
+                                        calendar.get(Calendar.MINUTE),
+                                        true
+                                    ).show()
                                 },
                                 calendar.get(Calendar.YEAR),
                                 calendar.get(Calendar.MONTH),
@@ -895,11 +937,12 @@ fun ItemInputForm(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = "Select Date"
+                                contentDescription = "Select Date and Time"
                             )
                         }
                     }
                 )
+
             }
         }
     }
