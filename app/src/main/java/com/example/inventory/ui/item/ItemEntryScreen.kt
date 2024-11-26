@@ -74,6 +74,7 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Image
@@ -129,6 +130,7 @@ import com.google.android.exoplayer2.ExoPlayer
 import java.io.File
 import com.google.android.exoplayer2.MediaItem
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import com.bumptech.glide.Glide
@@ -154,6 +156,7 @@ fun ItemEntryScreen(
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var isRecording by remember { mutableStateOf(false) }
     var audioFilePath by remember { mutableStateOf("") }
+
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -536,20 +539,6 @@ fun ItemEntryBody(
 }
 
 
-private fun startRecording(recorder: MediaRecorder, context: android.content.Context): String {
-    val file = File(context.filesDir, "recording_${System.currentTimeMillis()}.3gp")
-    val audioFilePath = file.absolutePath
-    recorder.apply {
-        setAudioSource(MediaRecorder.AudioSource.MIC)
-        setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-        setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-        setOutputFile(audioFilePath)
-        prepare()
-        start()
-    }
-    return audioFilePath
-}
-
 @Composable
 fun BottomActionButtons(
     onAddPhotoClick: () -> Unit,
@@ -597,36 +586,6 @@ fun BottomActionButtons(
 }
 
 
-private fun handleAudioRecording(
-    context: android.content.Context,
-    recorder: MediaRecorder,
-    isRecording: Boolean,
-    setIsRecording: (Boolean) -> Unit,
-    setAudioFilePath: (String) -> Unit
-) {
-    if (isRecording) {
-        try {
-            recorder.stop()
-            recorder.reset()
-            setIsRecording(false)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    } else {
-        val permissionCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-            val filePath = startRecording(recorder, context)
-            setAudioFilePath(filePath)
-            setIsRecording(true)
-        } else {
-            ActivityCompat.requestPermissions(
-                context as android.app.Activity,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
-                1
-            )
-        }
-    }
-}
 
 @Composable
 fun VideoItem(uri: String) {
@@ -735,43 +694,6 @@ fun VideoItem(uri: String) {
 
 
 
-
-
-
-@Composable
-fun MultimediaSectionAudio(title: String, uris: List<String>) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(dimensionResource(id = R.dimen.padding_medium))
-    )
-    if (uris.isNotEmpty()) {
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_small)),
-            modifier = Modifier.padding(horizontal = dimensionResource(id = R.dimen.padding_medium))
-        ) {
-            items(uris) { uri ->
-                if (title == stringResource(R.string.audio)) {
-                    AudioItem(uri = uri)
-                } else if (title == stringResource(R.string.video)) {
-                    VideoItem(uri = uri) // Utiliza VideoItem para mostrar el video
-                } else {
-                    Image(
-                        painter = rememberAsyncImagePainter(uri),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-        }
-    }
-}
-
-
 @Composable
 fun ItemInputForm(
     itemDetails: ItemDetails,
@@ -782,7 +704,7 @@ fun ItemInputForm(
     val dateText = remember { mutableStateOf(itemDetails.date?.toString() ?: "") }
     val calendar = Calendar.getInstance()
     val context = LocalContext.current
-
+    val alarms = remember { mutableStateListOf<Pair<Long, String>>() }
     val isLargeScreen = LocalContext.current.resources.configuration.screenWidthDp >= 600
 
     Column(
@@ -875,10 +797,6 @@ fun ItemInputForm(
                     }
                 )
             }
-
-
-
-
         } else {
             Column(
                 verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
@@ -922,40 +840,33 @@ fun ItemInputForm(
                     singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = {
-                            // Mostrar el DatePickerDialog primero
                             DatePickerDialog(
                                 context,
                                 { _, year, month, dayOfMonth ->
-                                    // Configurar la fecha seleccionada
                                     calendar.set(year, month, dayOfMonth)
-
-                                    // Actualizar la fecha seleccionada en el campo
                                     dateText.value = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
 
-                                    // Mostrar el TimePickerDialog para seleccionar la hora
                                     TimePickerDialog(
                                         context,
                                         { _, hourOfDay, minute ->
-                                            // Configurar la hora seleccionada
                                             calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
                                             calendar.set(Calendar.MINUTE, minute)
-                                            calendar.set(Calendar.SECOND, 0) // Establecer segundos en 0
+                                            calendar.set(Calendar.SECOND, 0)
 
-                                            // Actualizar el texto con fecha y hora seleccionadas
                                             dateText.value = SimpleDateFormat(
                                                 "dd/MM/yyyy HH:mm:ss",
                                                 Locale.getDefault()
                                             ).format(calendar.time)
 
-                                            // Notificar el cambio al modelo de datos
                                             onValueChange(itemDetails.copy(date = calendar.time.toString()))
 
-                                            // Configurar la alarma
+                                            // Configurar la alarma y agregarla a la lista
                                             setAlarm(context, calendar.timeInMillis, itemDetails.title)
+                                            alarms.add(calendar.timeInMillis to itemDetails.title)
                                         },
                                         calendar.get(Calendar.HOUR_OF_DAY),
                                         calendar.get(Calendar.MINUTE),
-                                        true // Usar formato de 24 horas
+                                        true
                                     ).show()
                                 },
                                 calendar.get(Calendar.YEAR),
@@ -971,14 +882,37 @@ fun ItemInputForm(
                     }
                 )
 
-
-
+                // Mostrar las alarmas configuradas
+                alarms.forEachIndexed { index, (time, title) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(text = title, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date(time)),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        IconButton(onClick = {
+                            alarms.removeAt(index)
+                            cancelAlarm(context, time.toInt())
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Alarm"
+                            )
+                        }
+                    }
+                }
             }
+
         }
 
     }
-
-
 
 }
 
@@ -998,7 +932,22 @@ fun setAlarm(context: Context, triggerAtMillis: Long, itemTitle: String) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
-    Log.d("AlarmDebug", "Configurando alarma para: ${Date(triggerAtMillis)}")
-
     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+}
+
+fun cancelAlarm(context: Context, alarmId: Int) {
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    val intent = Intent(context, AlarmReceiver::class.java).apply {
+        action = "com.example.SET_ALARM"
+    }
+
+    val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        alarmId,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    alarmManager.cancel(pendingIntent)
+    Log.d("AlarmDebug", "Alarma cancelada: $alarmId")
 }
