@@ -155,8 +155,24 @@ fun ItemEntryScreen(
     var isRecording by remember { mutableStateOf(false) }
     var audioFilePath by remember { mutableStateOf("") }
 
-    val itemUiState = viewModel.itemUiState.collectAsState().value
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                Toast.makeText(context, "Permiso de notificaciones otorgado", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Permiso de notificaciones denegado", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
 
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    val itemUiState = viewModel.itemUiState.collectAsState().value
 
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         uris?.forEach { uri ->
@@ -172,13 +188,11 @@ fun ItemEntryScreen(
         }
     }
 
-    // Definir videoFile en el alcance adecuado
     val videoFile = File(
         context.getExternalFilesDir(Environment.DIRECTORY_MOVIES),
         "video_${System.currentTimeMillis()}.mp4"
     )
 
-    // Launcher para grabar video
     val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { success ->
         if (success) {
             val videoUri = FileProvider.getUriForFile(
@@ -193,7 +207,6 @@ fun ItemEntryScreen(
         }
     }
 
-    // Definir un launcher específico para permisos múltiples de video (cámara y audio)
     val videoPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissions ->
@@ -201,7 +214,6 @@ fun ItemEntryScreen(
             val audioPermissionGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
 
             if (cameraPermissionGranted && audioPermissionGranted) {
-                // Permisos otorgados, proceder con la grabación del video
                 videoLauncher.launch(FileProvider.getUriForFile(context, "${context.packageName}.provider", videoFile))
             } else {
                 Toast.makeText(context, "Permisos denegados para grabar video", Toast.LENGTH_SHORT).show()
@@ -244,10 +256,8 @@ fun ItemEntryScreen(
                     )
 
                     if (cameraPermissionCheck == PackageManager.PERMISSION_GRANTED && audioPermissionCheck == PackageManager.PERMISSION_GRANTED) {
-
                         videoLauncher.launch(FileProvider.getUriForFile(context, "${context.packageName}.provider", videoFile))
                     } else {
-
                         videoPermissionLauncher.launch(
                             arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
                         )
@@ -340,6 +350,7 @@ fun ItemEntryScreen(
         }
     }
 }
+
 
 
 fun saveBitmapToFile(context: Context, bitmap: Bitmap): Uri {
