@@ -26,6 +26,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inventory.data.ItemsRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -40,17 +43,14 @@ class ItemEditViewModel(
     private val itemsRepository: ItemsRepository
 ) : ViewModel() {
 
-    /**
-     * Holds current item ui state
-     */
-    var itemUiState by mutableStateOf(ItemUiState())
-        private set
+    private val _itemUiState = MutableStateFlow(ItemUiState())
+    val itemUiState: StateFlow<ItemUiState> = _itemUiState.asStateFlow()
 
     private val itemId: Int = checkNotNull(savedStateHandle[ItemEditDestination.itemIdArg])
 
     init {
         viewModelScope.launch {
-            itemUiState = itemsRepository.getItemStream(itemId)
+            _itemUiState.value = itemsRepository.getItemStream(itemId)
                 .filterNotNull()
                 .first()
                 .toItemUiState(true)
@@ -61,18 +61,18 @@ class ItemEditViewModel(
      * Update the item in the [ItemsRepository]'s data source
      */
     suspend fun updateItem() {
-        if (validateInput(itemUiState.itemDetails)) {
-            itemsRepository.updateItem(itemUiState.itemDetails.toItem())
+        if (validateInput(_itemUiState.value.itemDetails)) {
+            itemsRepository.updateItem(_itemUiState.value.itemDetails.toItem())
         }
     }
+
     suspend fun updateItem(uri: String, type: ContentType) {
         val updatedDetails = when (type) {
-            ContentType.PHOTO -> itemUiState.itemDetails.copy(photoUris = itemUiState.itemDetails.photoUris + uri)
-            ContentType.VIDEO -> itemUiState.itemDetails.copy(videoUris = itemUiState.itemDetails.videoUris + uri)
-            ContentType.AUDIO -> itemUiState.itemDetails.copy(audioUris = itemUiState.itemDetails.audioUris + uri)
+            ContentType.PHOTO -> _itemUiState.value.itemDetails.copy(photoUris = _itemUiState.value.itemDetails.photoUris + uri)
+            ContentType.VIDEO -> _itemUiState.value.itemDetails.copy(videoUris = _itemUiState.value.itemDetails.videoUris + uri)
+            ContentType.AUDIO -> _itemUiState.value.itemDetails.copy(audioUris = _itemUiState.value.itemDetails.audioUris + uri)
         }
 
-        // Actualizar el ítem con los nuevos detalles
         if (validateInput(updatedDetails)) {
             itemsRepository.updateItem(updatedDetails.toItem())
             reloadItem()
@@ -80,27 +80,17 @@ class ItemEditViewModel(
     }
 
     private suspend fun reloadItem() {
-        itemUiState = itemsRepository.getItemStream(itemId)
+        _itemUiState.value = itemsRepository.getItemStream(itemId)
             .filterNotNull()
             .first()
             .toItemUiState(true)
     }
 
-    private fun validateUri(uri: String): Boolean {
-        return uri.isNotBlank()
-    }
-
-
-    /**
-     * Updates the [itemUiState] with the value provided in the argument. This method also triggers
-     * a validation for input values.
-     */
     fun updateUiState(itemDetails: ItemDetails) {
-        itemUiState =
-            ItemUiState(itemDetails = itemDetails, isEntryValid = validateInput(itemDetails))
+        _itemUiState.value = ItemUiState(itemDetails = itemDetails, isEntryValid = validateInput(itemDetails))
     }
 
-    private fun validateInput(uiState: ItemDetails = itemUiState.itemDetails): Boolean {
+    private fun validateInput(uiState: ItemDetails = _itemUiState.value.itemDetails): Boolean {
         return with(uiState) {
             title.isNotBlank() && descripcion.isNotBlank()
         }

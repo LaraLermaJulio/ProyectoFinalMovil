@@ -144,6 +144,9 @@ object ItemEntryDestination : NavigationDestination {
     override val titleRes = R.string.item_entry_title
 }
 
+
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemEntryScreen(
@@ -466,6 +469,7 @@ fun MultimediaSection(title: String, uris: List<String>) {
 @Composable
 fun AudioItem(uri: String) {
     var isPlaying by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val mediaPlayer = remember {
         MediaPlayer()
     }
@@ -474,23 +478,24 @@ fun AudioItem(uri: String) {
         onClick = {
             if (isPlaying) {
                 mediaPlayer.stop()
+                mediaPlayer.reset()
                 isPlaying = false
             } else {
                 try {
-                    mediaPlayer.reset()
-                    mediaPlayer.setDataSource(uri)
+                    mediaPlayer.reset()  // Reset antes de volver a preparar
+                    mediaPlayer.setDataSource(context, Uri.parse(uri))  // Verifica que Uri se parsea correctamente
                     mediaPlayer.prepare()
                     mediaPlayer.start()
                     isPlaying = true
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    Toast.makeText(context, "Error al reproducir audio", Toast.LENGTH_SHORT).show()
                 }
             }
         },
         modifier = Modifier
             .size(80.dp)
-            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
+            .padding(8.dp)
     ) {
         Icon(
             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
