@@ -238,8 +238,22 @@ fun ItemEntryScreen(
             )
         },
         bottomBar = {
+            val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+                uris?.forEach { uri ->
+                    val contentResolver = context.contentResolver
+                    val mimeType = contentResolver.getType(uri)
+                    when {
+                        mimeType?.startsWith("image/") == true -> viewModel.addUri(uri.toString(), ContentType.PHOTO)
+                        mimeType?.startsWith("video/") == true -> viewModel.addUri(uri.toString(), ContentType.VIDEO)
+                        mimeType?.startsWith("audio/") == true -> viewModel.addUri(uri.toString(), ContentType.AUDIO)
+                        else -> viewModel.addUri(uri.toString(), ContentType.FILE) // Genérico para otros archivos
+                    }
+                }
+            }
+
+// Modifica la llamada del botón para que llame a `fileLauncher` en lugar de `imageLauncher`
             BottomActionButtons(
-                onAddPhotoClick = { imageLauncher.launch("image/*") },
+                onAddPhotoClick = { fileLauncher.launch("*/*") }, // Se cambia el tipo a `*/*` para permitir cualquier archivo.
                 onAddPhotoFromCameraClick = {
                     val cameraPermissionCheck = ContextCompat.checkSelfPermission(
                         context,
@@ -314,6 +328,7 @@ fun ItemEntryScreen(
                 },
                 isRecording = isRecording
             )
+
         }
     ) { innerPadding ->
         Column(
@@ -589,6 +604,7 @@ fun BottomActionButtons(
         }
     }
 }
+
 
 
 

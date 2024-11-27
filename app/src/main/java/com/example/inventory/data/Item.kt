@@ -37,5 +37,6 @@ data class Item(
     val date: String,
     val photoUris: List<String> = emptyList(),
     val videoUris: List<String> = emptyList(),
-    val audioUris: List<String> = emptyList()
+    val audioUris: List<String> = emptyList(),
+    val fileUris: List<String> = emptyList()
 )

@@ -165,6 +165,8 @@ private fun ItemDetailsBody(
 
         // Mostrar los detalles del ítem
         ItemDetails(item = itemDetailsUiState.itemDetails.toItem(), modifier = Modifier.fillMaxWidth())
+        // Mostrar alarmas relacionadas
+        AlarmSection(itemTitle = itemDetailsUiState.itemDetails.title)
 
         // Mostrar multimedia
         MultimediaSection(
@@ -182,8 +184,7 @@ private fun ItemDetailsBody(
             uris = itemDetailsUiState.itemDetails.audioUris
         )
 
-        // Mostrar alarmas relacionadas
-        AlarmSection(itemTitle = itemDetailsUiState.itemDetails.title)
+
 
         // Botones para cambiar el estado del ítem y eliminarlo
         Button(
@@ -229,7 +230,7 @@ private fun ItemDetailsBody(
 @Composable
 fun AlarmSection(itemTitle: String) {
     val context = LocalContext.current
-    val alarms = remember { loadAlarms(context, itemTitle) }
+    val alarms = loadAlarms(context, itemTitle)
 
     if (alarms.isNotEmpty()) {
         Text(
@@ -260,13 +261,15 @@ fun AlarmSection(itemTitle: String) {
     }
 }
 
+
 fun loadAlarms(context: Context, itemTitle: String): List<Pair<Long, String>> {
     val sharedPreferences = context.getSharedPreferences("alarms", Context.MODE_PRIVATE)
     return sharedPreferences.all.mapNotNull { (title, timestamp) ->
-        val time = timestamp as? Long ?: return@mapNotNull null
-        if (title == itemTitle) Pair(time, title) else null
+        val time = (timestamp as? String)?.toLongOrNull() ?: (timestamp as? Long)
+        if (time != null && title == itemTitle) Pair(time, title) else null
     }
 }
+
 
 
 

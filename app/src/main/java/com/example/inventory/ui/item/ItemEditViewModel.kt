@@ -71,6 +71,9 @@ class ItemEditViewModel(
             ContentType.PHOTO -> _itemUiState.value.itemDetails.copy(photoUris = _itemUiState.value.itemDetails.photoUris + uri)
             ContentType.VIDEO -> _itemUiState.value.itemDetails.copy(videoUris = _itemUiState.value.itemDetails.videoUris + uri)
             ContentType.AUDIO -> _itemUiState.value.itemDetails.copy(audioUris = _itemUiState.value.itemDetails.audioUris + uri)
+            ContentType.FILE -> _itemUiState.value.itemDetails.copy(
+                fileUris = _itemUiState.value.itemDetails.fileUris + uri
+            )
         }
 
         if (validateInput(updatedDetails)) {

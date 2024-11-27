@@ -1,3 +1,4 @@
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -35,19 +36,40 @@ class ItemEntryViewModel(private val itemsRepository: ItemsRepository) : ViewMod
      * Agrega una URI válida al tipo de contenido especificado (fotos, videos, audios).
      * Si la URI no es válida, no se realiza ninguna acción.
      */
-    fun addUri(uri: String, type: ContentType) {
-        if (uri.isNotBlank() && validateUri(uri)) {
-            _itemUiState.update { currentState ->
-                val currentDetails = currentState.itemDetails
-                val updatedDetails = when (type) {
-                    ContentType.PHOTO -> currentDetails.copy(photoUris = currentDetails.photoUris + uri)
-                    ContentType.VIDEO -> currentDetails.copy(videoUris = currentDetails.videoUris + uri)
-                    ContentType.AUDIO -> currentDetails.copy(audioUris = currentDetails.audioUris + uri)
-                }
-                currentState.copy(itemDetails = updatedDetails)
+    fun addUri(uri: String, contentType: ContentType) {
+        Log.d("ItemEntryViewModel", "URI agregado: $uri")
+        when (contentType) {
+            ContentType.PHOTO -> {
+                _itemUiState.value = _itemUiState.value.copy(
+                    itemDetails = _itemUiState.value.itemDetails.copy(
+                        photoUris = _itemUiState.value.itemDetails.photoUris + uri
+                    )
+                )
+            }
+            ContentType.VIDEO -> {
+                _itemUiState.value = _itemUiState.value.copy(
+                    itemDetails = _itemUiState.value.itemDetails.copy(
+                        videoUris = _itemUiState.value.itemDetails.videoUris + uri
+                    )
+                )
+            }
+            ContentType.AUDIO -> {
+                _itemUiState.value = _itemUiState.value.copy(
+                    itemDetails = _itemUiState.value.itemDetails.copy(
+                        audioUris = _itemUiState.value.itemDetails.audioUris + uri
+                    )
+                )
+            }
+            ContentType.FILE -> {
+                _itemUiState.value = _itemUiState.value.copy(
+                    itemDetails = _itemUiState.value.itemDetails.copy(
+                        fileUris = _itemUiState.value.itemDetails.fileUris + uri
+                    )
+                )
             }
         }
     }
+
 
 
 
@@ -106,7 +128,8 @@ data class ItemDetails(
     val date: String = "",
     val photoUris: List<String> = emptyList(),
     val videoUris: List<String> = emptyList(),
-    val audioUris: List<String> = emptyList()
+    val audioUris: List<String> = emptyList(),
+    val fileUris: List<String> = emptyList()
 )
 
 /**
@@ -151,5 +174,5 @@ fun Item.toItemDetails(): ItemDetails = ItemDetails(
  * Enum para representar los tipos de contenido (foto, video, audio).
  */
 enum class ContentType {
-    PHOTO, VIDEO, AUDIO
+    PHOTO, VIDEO, AUDIO , FILE
 }
