@@ -16,6 +16,7 @@
 
 package com.example.inventory.ui.item
 
+import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
 import android.widget.VideoView
@@ -80,6 +81,9 @@ import com.example.inventory.ui.navigation.NavigationDestination
 import com.example.inventory.ui.theme.InventoryTheme
 import kotlinx.coroutines.launch
 import toItem
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object ItemDetailsDestination : NavigationDestination {
     override val route = "item_details"
@@ -178,6 +182,9 @@ private fun ItemDetailsBody(
             uris = itemDetailsUiState.itemDetails.audioUris
         )
 
+        // Mostrar alarmas relacionadas
+        AlarmSection(itemTitle = itemDetailsUiState.itemDetails.title)
+
         // Botones para cambiar el estado del ítem y eliminarlo
         Button(
             onClick = onMarkAsFinished,
@@ -220,30 +227,48 @@ private fun ItemDetailsBody(
 }
 
 @Composable
-fun MultimediaSection(
-    title: String,
-    uris: List<String>,
-    modifier: Modifier = Modifier
-) {
-    if (uris.isNotEmpty()) {
-        Column(modifier = modifier) {
-            Text(text = title, fontWeight = FontWeight.Bold)
-            uris.forEach { uri ->
-                when {
-                    uri.endsWith(".jpg") || uri.endsWith(".png") -> {
-                        ImagePreview(uri)
-                    }
-                    uri.endsWith(".mp4") -> {
-                        VideoPreview(uri)
-                    }
-                    uri.endsWith(".mp3") || uri.endsWith(".wav") -> {
-                        AudioPreview(uri)
-                    }
+fun AlarmSection(itemTitle: String) {
+    val context = LocalContext.current
+    val alarms = remember { loadAlarms(context, itemTitle) }
+
+    if (alarms.isNotEmpty()) {
+        Text(
+            text = stringResource(R.string.Tasks),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = dimensionResource(id = R.dimen.padding_medium))
+        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_small))
+        ) {
+            alarms.forEach { (time, title) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(time)),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.alignByBaseline()
+                    )
                 }
             }
         }
     }
 }
+
+fun loadAlarms(context: Context, itemTitle: String): List<Pair<Long, String>> {
+    val sharedPreferences = context.getSharedPreferences("alarms", Context.MODE_PRIVATE)
+    return sharedPreferences.all.mapNotNull { (title, timestamp) ->
+        val time = timestamp as? Long ?: return@mapNotNull null
+        if (title == itemTitle) Pair(time, title) else null
+    }
+}
+
+
 
 @Composable
 fun ImagePreview(uri: String) {

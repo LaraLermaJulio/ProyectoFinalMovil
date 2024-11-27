@@ -896,17 +896,32 @@ fun ItemInputForm(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
-                        IconButton(onClick = {
-                            alarms.removeAt(index)
-                            cancelAlarm(context, title.hashCode())
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Alarm"
-                            )
+                        Row {
+                            // Botón para editar
+                            IconButton(onClick = {
+                                // Abre un diálogo para editar la alarma
+                                editAlarm(context, alarms, index)
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Alarm"
+                                )
+                            }
+
+                            // Botón para eliminar
+                            IconButton(onClick = {
+                                alarms.removeAt(index)
+                                cancelAlarm(context, title.hashCode())
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Alarm"
+                                )
+                            }
                         }
                     }
                 }
+
 
 
             }
@@ -944,6 +959,47 @@ fun setAlarm(context: Context, triggerAtMillis: Long, itemTitle: String) {
     }
 }
 
+fun editAlarm(context: Context, alarms: MutableList<Pair<Long, String>>, index: Int) {
+    val currentAlarm = alarms[index]
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = currentAlarm.first
+    }
+
+    // Mostrar DatePickerDialog
+    DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            calendar.set(Calendar.YEAR, year)
+            calendar.set(Calendar.MONTH, month)
+            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+
+            // Mostrar TimePickerDialog
+            TimePickerDialog(
+                context,
+                { _, hourOfDay, minute ->
+                    calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                    calendar.set(Calendar.MINUTE, minute)
+                    calendar.set(Calendar.SECOND, 0)
+
+                    // Actualizar la alarma en la lista
+                    val newTime = calendar.timeInMillis
+                    val title = currentAlarm.second
+                    alarms[index] = newTime to title
+
+                    // Cancelar la alarma anterior y programar la nueva
+                    cancelAlarm(context, title.hashCode())
+                    setAlarm(context, newTime, title)
+                },
+                calendar.get(Calendar.HOUR_OF_DAY),
+                calendar.get(Calendar.MINUTE),
+                true
+            ).show()
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    ).show()
+}
 
 fun cancelAlarm(context: Context, alarmId: Int) {
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
