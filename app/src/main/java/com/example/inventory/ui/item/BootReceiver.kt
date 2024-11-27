@@ -12,13 +12,12 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             Log.d("BootReceiver", "Dispositivo reiniciado, restaurando alarmas...")
 
-            // Recupera alarmas
+            // Recuperar alarmas almacenadas
             val sharedPreferences = context.getSharedPreferences("alarms", Context.MODE_PRIVATE)
             val alarmEntries = sharedPreferences.all
 
-            alarmEntries.forEach { (id, timestamp) ->
+            alarmEntries.forEach { (title, timestamp) ->
                 val triggerAtMillis = (timestamp as? Long) ?: return@forEach
-                val title = id
 
                 // Restaurar cada alarma
                 setAlarm(context, triggerAtMillis, title)
@@ -26,3 +25,4 @@ class BootReceiver : BroadcastReceiver() {
         }
     }
 }
+

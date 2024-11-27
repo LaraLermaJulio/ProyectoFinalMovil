@@ -898,7 +898,7 @@ fun ItemInputForm(
                         }
                         IconButton(onClick = {
                             alarms.removeAt(index)
-                            cancelAlarm(context, time.toInt())
+                            cancelAlarm(context, title.hashCode())
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
@@ -907,6 +907,8 @@ fun ItemInputForm(
                         }
                     }
                 }
+
+
             }
 
         }
@@ -931,14 +933,17 @@ fun setAlarm(context: Context, triggerAtMillis: Long, itemTitle: String) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
+    // Programar la alarma
     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
 
+    // Guardar alarma completa en SharedPreferences (fecha y hora en milisegundos)
     val sharedPreferences = context.getSharedPreferences("alarms", Context.MODE_PRIVATE)
     with(sharedPreferences.edit()) {
-        putLong(itemTitle, triggerAtMillis)
+        putLong(itemTitle, triggerAtMillis) // Guardamos con el título como clave
         apply()
     }
 }
+
 
 fun cancelAlarm(context: Context, alarmId: Int) {
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
