@@ -31,7 +31,14 @@
         tools:targetApi="33">
 
         <receiver android:name=".ui.item.AlarmReceiver" />
-
+        <receiver
+            android:name=".ui.item.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

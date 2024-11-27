@@ -882,7 +882,6 @@ fun ItemInputForm(
                     }
                 )
 
-                // Mostrar las alarmas configuradas
                 alarms.forEachIndexed { index, (time, title) ->
                     Row(
                         modifier = Modifier
@@ -927,12 +926,18 @@ fun setAlarm(context: Context, triggerAtMillis: Long, itemTitle: String) {
 
     val pendingIntent = PendingIntent.getBroadcast(
         context,
-        triggerAtMillis.toInt(),
+        itemTitle.hashCode(),
         intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+
+    val sharedPreferences = context.getSharedPreferences("alarms", Context.MODE_PRIVATE)
+    with(sharedPreferences.edit()) {
+        putLong(itemTitle, triggerAtMillis)
+        apply()
+    }
 }
 
 fun cancelAlarm(context: Context, alarmId: Int) {
@@ -949,5 +954,10 @@ fun cancelAlarm(context: Context, alarmId: Int) {
     )
 
     alarmManager.cancel(pendingIntent)
-    Log.d("AlarmDebug", "Alarma cancelada: $alarmId")
+
+    val sharedPreferences = context.getSharedPreferences("alarms", Context.MODE_PRIVATE)
+    with(sharedPreferences.edit()) {
+        remove(alarmId.toString())
+        apply()
+    }
 }

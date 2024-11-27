@@ -44,6 +44,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -87,6 +89,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+
     val homeUiState by viewModel.homeUiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val configuration = LocalConfiguration.current
@@ -95,6 +98,14 @@ fun HomeScreen(
     val recorder = remember { MediaRecorder() }
     var isRecording by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    var isSearchVisible by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredItems = if (searchQuery.isEmpty()) {
+        homeUiState.itemList
+    } else {
+        homeUiState.itemList.filter { it.title.contains(searchQuery, ignoreCase = true) }
+    }
     var audioFilePath by remember { mutableStateOf("") }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -121,16 +132,8 @@ fun HomeScreen(
                             maxLines = 1
                         )
                     },
-                    navigationIcon = {
-                        IconButton(onClick = { /* Acción de la hamburguesa */ }) {
-                            Icon(
-                                imageVector = Icons.Filled.Menu,
-                                contentDescription = "Menu"
-                            )
-                        }
-                    },
                     actions = {
-                        IconButton(onClick = { /* Acciones de búsqueda */ }) {
+                        IconButton(onClick = { isSearchVisible = !isSearchVisible }) {
                             Icon(
                                 imageVector = Icons.Filled.Search,
                                 contentDescription = "Buscar"
@@ -139,6 +142,24 @@ fun HomeScreen(
                     },
                     scrollBehavior = scrollBehavior,
                 )
+                // Mostrar el campo de búsqueda si `isSearchVisible` es verdadero
+                if (isSearchVisible) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        placeholder = { Text(text = stringResource(R.string.yes)) },
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Filled.Search, contentDescription = "Buscar")
+                        },
+                        colors = TextFieldDefaults.textFieldColors(
+                            cursorColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
             }
         },
         bottomBar = {
@@ -210,7 +231,7 @@ fun HomeScreen(
         },
     ) { innerPadding ->
         HomeBody(
-            itemList = homeUiState.itemList,
+            itemList = filteredItems,
             onItemClick = navigateToItemUpdate,
             modifier = modifier.fillMaxSize(),
             contentPadding = innerPadding,
